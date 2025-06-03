@@ -1,0 +1,58 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js / Vite / etc.
+.next/
+dist/
+out/
+.cache/
+build/
+
+# dotenv
+.env
+.env.local
+.env.*.local
+
+# IDEs y editores
+.vscode/
+.idea/
+*.swp
+
+# SO
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Coverage
+coverage/
+*.lcov
+
+# Docker
+docker-compose.override.yml
+docker-compose.dev.yml
+*.pid
+*.seed
+*.sqlite3
+Dockerfile*
+docker-compose.yml
+
+# Misc
+*.tgz
+*.gz
+*.zip
+*.tar
+*.log
+*.bak
+*.tmp
+*.temp
+
+# Git
+*.orig
+*.rej
