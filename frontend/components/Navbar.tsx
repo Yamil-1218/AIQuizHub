@@ -9,12 +9,15 @@ import toast from 'react-hot-toast';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
 import { setUser, logout } from '@/store/slices/authSlice';
+import Cookies from 'js-cookie';
 
-// Interface para el payload del JWT
 interface JwtPayload {
-  role: string;
+  id: string;
+  role: 'student' | 'instructor';
   fullName?: string;
   email?: string;
+  institution?: string;
+  department?: string;
 }
 
 export default function Navbar() {
@@ -34,28 +37,31 @@ export default function Navbar() {
     };
 
     const checkAuth = async () => {
-      const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+      const token = Cookies.get('token');
       if (token) {
         try {
           const decoded = await verifyToken(token);
           
           // Verificación de tipo segura
-          if (typeof decoded === 'object' && decoded !== null && 'role' in decoded) {
+          if (typeof decoded === 'object' && decoded !== null && 'id' in decoded && 'role' in decoded) {
             const payload = decoded as JwtPayload;
             dispatch(setUser({ 
+              id: payload.id,
               role: payload.role,
+              email: payload.email || '',
               fullName: payload.fullName,
-              email: payload.email
+              ...(payload.role === 'student' && { institution: payload.institution }),
+              ...(payload.role === 'instructor' && { department: payload.department })
             }));
           } else {
             // Token no tiene la estructura esperada
-            dispatch(setUser(null));
+            dispatch(logout());
           }
         } catch (error) {
-          dispatch(setUser(null));
+          dispatch(logout());
         }
       } else {
-        dispatch(setUser(null));
+        dispatch(logout());
       }
     };
 
@@ -68,7 +74,7 @@ export default function Navbar() {
   }, [pathname, dispatch]);
 
   const handleLogout = () => {
-    document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    Cookies.remove('token');
     dispatch(logout());
     toast.success('Sesión cerrada correctamente');
     router.push('/');
@@ -76,7 +82,9 @@ export default function Navbar() {
   };
 
   const getDashboardLink = () => {
-    return userData?.role === 'instructor' 
+    if (!userData) return null;
+    
+    return userData.role === 'instructor' 
       ? { 
           name: 'Panel Instructor', 
           path: '/dashboard/instructor', 
@@ -139,7 +147,7 @@ export default function Navbar() {
                 {link.name}
               </Link>
             ))}
-            {userData?.role && (
+            {userData && dashboardLink && (
               <Link
                 href={dashboardLink.path}
                 className={`px-1 py-2 font-medium transition ${pathname.startsWith('/dashboard') ? 'text-yellow-400 border-b-2 border-yellow-400' : 'text-white hover:text-yellow-300'}`}
@@ -216,7 +224,7 @@ export default function Navbar() {
                   {link.name}
                 </Link>
               ))}
-              {userData?.role && (
+              {userData && dashboardLink && (
                 <Link
                   href={dashboardLink.path}
                   onClick={() => setIsOpen(false)}

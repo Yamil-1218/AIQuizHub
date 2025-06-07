@@ -1,50 +1,85 @@
-'use client'
+'use client';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useDispatch } from 'react-redux';
+import { setUser } from '@/store/slices/authSlice';
+import Cookies from 'js-cookie';
+import { FaSignInAlt, FaGoogle, FaGithub } from 'react-icons/fa';
+import toast from 'react-hot-toast';
+import Link from 'next/link';
 
-import { useState } from 'react'
-import { FaSignInAlt, FaGoogle, FaGithub } from 'react-icons/fa'
-import { useRouter } from 'next/navigation'
-import toast from 'react-hot-toast'
-import Link from 'next/link'
+interface LoginResponse {
+  token: string;
+  id: string;
+  role: 'student' | 'instructor';
+  email: string;
+  fullName: string;
+  institution?: string;
+  department?: string;
+  error?: string;
+}
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const dispatch = useDispatch();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
 
-      const data = await response.json()
+      const data: LoginResponse = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Error al iniciar sesión')
+        throw new Error(data.error || 'Error al iniciar sesión');
       }
 
-      toast.success(`Bienvenido, ${data.fullName}!`)
-      
-      // Redirigir según el rol
-      if (data.role === 'instructor') {
-        router.push('/dashboard/instructor')
-      } else {
-        router.push('/dashboard/student')
-      }
+      // Guardar token en cookies (no httpOnly para que Next.js pueda leerlo)
+      Cookies.set('auth_token', data.token, {
+        expires: 7,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+      });
+
+      // Actualizar estado de Redux
+      dispatch(setUser({
+        id: data.id,
+        role: data.role,
+        email: data.email,
+        fullName: data.fullName,
+        ...(data.role === 'student' && { institution: data.institution }),
+        ...(data.role === 'instructor' && { department: data.department }),
+      }));
+
+      // Redirección absoluta para garantizar carga completa
+      window.location.href = `/dashboard/${data.role}`;
+
     } catch (error: any) {
-      toast.error(error.message || 'Credenciales incorrectas')
+      toast.error(error.message);
+      setFormData(prev => ({ ...prev, password: '' })); // Limpiar contraseña
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
@@ -61,9 +96,10 @@ export default function LoginPage() {
             </label>
             <input
               id="email"
+              name="email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={handleChange}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 text-white"
               placeholder="tu@email.com"
               required
@@ -76,39 +112,22 @@ export default function LoginPage() {
             </label>
             <input
               id="password"
+              name="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={handleChange}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 text-white"
               placeholder="••••••••"
               required
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-yellow-400 focus:ring-yellow-400 border-gray-300 rounded"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
-                Recuérdame
-              </label>
-            </div>
-
-            <div className="text-sm">
-              <Link href="/forgot-password" className="font-medium text-yellow-400 hover:text-yellow-300">
-                ¿Olvidaste tu contraseña?
-              </Link>
-            </div>
-          </div>
-
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-medium text-gray-900 bg-yellow-400 hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-medium text-gray-900 bg-yellow-400 hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all ${
+              isLoading ? 'opacity-70 cursor-not-allowed' : ''
+            }`}
           >
             {isLoading ? (
               <span className="flex items-center">
@@ -127,35 +146,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-600"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-transparent text-gray-400">O continúa con</span>
-            </div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              className="w-full inline-flex justify-center py-2 px-4 border border-white/10 rounded-lg shadow-sm bg-white/5 text-sm font-medium text-gray-300 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all"
-            >
-              <FaGoogle className="h-5 w-5 text-red-400" />
-              <span className="ml-2">Google</span>
-            </button>
-
-            <button
-              type="button"
-              className="w-full inline-flex justify-center py-2 px-4 border border-white/10 rounded-lg shadow-sm bg-white/5 text-sm font-medium text-gray-300 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all"
-            >
-              <FaGithub className="h-5 w-5 text-white" />
-              <span className="ml-2">GitHub</span>
-            </button>
-          </div>
-        </div>
-
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-400">
             ¿No tienes una cuenta?{' '}
@@ -166,5 +156,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

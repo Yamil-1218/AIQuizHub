@@ -1,79 +1,114 @@
-'use client'
+'use client';
 
-import { FaBook, FaChartLine, FaClipboardList, FaComments } from 'react-icons/fa'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import toast from 'react-hot-toast'
+import { FaBook, FaChartLine, FaClipboardList, FaComments } from 'react-icons/fa';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import { useDispatch, useSelector } from 'react-redux';
+import { setUser } from '@/store/slices/authSlice';
+import { RootState } from '@/store/index';
+import jwt from 'jsonwebtoken';
+import Cookies from 'js-cookie';
 
 export default function StudentDashboard() {
-  const [user, setUser] = useState<any>(null)
-  const [quizzes, setQuizzes] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [userRes, quizzesRes] = await Promise.all([
-          fetch('/api/user/me'),
-          fetch('/api/quizzes/available')
-        ])
+    if (!user) {
+      const token = Cookies.get('token');
+      if (token) {
+        try {
+          const decoded = jwt.decode(token) as {
+            id: string;
+            role: string;
+            fullName?: string;
+            email?: string;
+            institution?: string;
+          };
 
-        if (!userRes.ok || !quizzesRes.ok) {
-          throw new Error('Error al cargar datos')
+          if (decoded && decoded.role === 'student') {
+            dispatch(setUser({
+              id: decoded.id, // Asegúrate de incluir el id
+              role: decoded.role,
+              email: decoded.email || '',
+              fullName: decoded.fullName,
+              ...(decoded.role === 'student' && { institution: decoded.institution })
+            }));
+          } else {
+            router.push('/dashboard/instructor');
+          }
+        } catch (err) {
+          console.error('Error decoding token:', err);
+          router.push('/login');
         }
-
-        const [userData, quizzesData] = await Promise.all([
-          userRes.json(),
-          quizzesRes.json()
-        ])
-
-        setUser(userData)
-        setQuizzes(quizzesData)
-
-      } catch (error: any) {
-        toast.error(error.message || 'Error al cargar datos')
-      } finally {
-        setLoading(false)
+      } else {
+        router.push('/login');
       }
+    } else if (user.role !== 'student') {
+      router.push('/dashboard/instructor');
     }
+  }, [user, dispatch, router]);
 
-    fetchData()
-  }, [])
+  useEffect(() => {
+    if (user && user.role === 'student') {
+      const fetchData = async () => {
+        try {
+          const quizzesRes = await fetch('/api/quizzes/available');
 
-  if (loading) {
+          if (!quizzesRes.ok) {
+            throw new Error('Error al cargar datos');
+          }
+
+          const quizzesData = await quizzesRes.json();
+          setQuizzes(quizzesData);
+        } catch (error: any) {
+          toast.error(error.message || 'Error al cargar datos');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchData();
+    }
+  }, [user]);
+
+  if (loading || !user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 text-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-400"></div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 text-white">
-      
+
       <main className="container mx-auto px-4 pt-24 pb-8">
         {/* Sección de bienvenida */}
         <section className="mb-12">
           <div className="bg-gradient-to-r from-indigo-800 to-purple-800 rounded-xl p-6 shadow-lg">
-            <h2 className="text-3xl font-bold mb-2">¡Bienvenido, {user?.name || 'Estudiante'}!</h2>
+            <h2 className="text-3xl font-bold mb-2">¡Bienvenido, {user?.fullName || 'Estudiante'}!</h2>
             <p className="text-gray-300">Prepárate para mejorar tus habilidades con nuestros cuestionarios interactivos</p>
           </div>
         </section>
 
         {/* Estadísticas */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <StatCard 
+          <StatCard
             icon={<FaBook className="text-yellow-400 text-xl" />}
             title="Cursos completados"
             value="3"
           />
-          <StatCard 
+          <StatCard
             icon={<FaChartLine className="text-yellow-400 text-xl" />}
             title="Promedio"
             value="8.5/10"
           />
-          <StatCard 
+          <StatCard
             icon={<FaClipboardList className="text-yellow-400 text-xl" />}
             title="Cuestionarios"
             value={quizzes.length}
@@ -112,7 +147,7 @@ function AvailableQuizzes({ quizzes, router }: { quizzes: any[], router: any }) 
     <section className="mb-12">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Cuestionarios Disponibles</h2>
-        <button 
+        <button
           onClick={() => router.push('/quizzes')}
           className="text-yellow-400 hover:text-yellow-300 flex items-center"
         >
@@ -122,7 +157,7 @@ function AvailableQuizzes({ quizzes, router }: { quizzes: any[], router: any }) 
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {quizzes.map((quiz, index) => (
-          <div 
+          <div
             key={index}
             onClick={() => router.push(`/quiz/${quiz.id}`)}
             className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-yellow-400 transition-all cursor-pointer hover:-translate-y-1"

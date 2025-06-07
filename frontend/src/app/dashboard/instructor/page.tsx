@@ -1,90 +1,131 @@
-'use client'
+'use client';
 
-import { FaUsers, FaFileAlt, FaChartBar, FaPlus, FaComments } from 'react-icons/fa'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import toast from 'react-hot-toast'
+import { FaUsers, FaFileAlt, FaChartBar, FaPlus, FaComments } from 'react-icons/fa';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import { useDispatch, useSelector } from 'react-redux';
+import { setUser } from '@/store/slices/authSlice';
+import { RootState } from '@/store/index';
+import jwt from 'jsonwebtoken';
+import Cookies from 'js-cookie';
 
 export default function InstructorDashboard() {
-  const [user, setUser] = useState<any>(null)
-  const [students, setStudents] = useState<any[]>([])
-  const [quizzes, setQuizzes] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const [students, setStudents] = useState<any[]>([]);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Simulación de carga de datos
-        const [userRes, studentsRes, quizzesRes] = await Promise.all([
-          fetch('/api/user/me'),
-          fetch('/api/students'),
-          fetch('/api/quizzes/created')
-        ])
+    if (!user) {
+      const token = Cookies.get('token');
+      if (token) {
+        try {
+          const decoded = jwt.decode(token) as {
+            id: string;
+            role: string;
+            fullName?: string;
+            email?: string;
+            institution?: string;
+            department?: string;
+          };
 
-        if (!userRes.ok || !studentsRes.ok || !quizzesRes.ok) {
-          throw new Error('Error al cargar datos')
+          if (decoded && decoded.role === 'instructor') {
+            dispatch(setUser({
+              id: decoded.id, // Asegúrate de incluir el id
+              role: decoded.role,
+              email: decoded.email || '',
+              fullName: decoded.fullName,
+              ...(decoded.role === 'instructor' && { department: decoded.department })
+            }));
+          } else {
+            router.push('/dashboard/student');
+          }
+        } catch (err) {
+          console.error('Error decoding token:', err);
+          router.push('/login');
         }
-
-        const [userData, studentsData, quizzesData] = await Promise.all([
-          userRes.json(),
-          studentsRes.json(),
-          quizzesRes.json()
-        ])
-
-        setUser(userData)
-        setStudents(studentsData)
-        setQuizzes(quizzesData)
-
-      } catch (error: any) {
-        toast.error(error.message || 'Error al cargar datos')
-      } finally {
-        setLoading(false)
+      } else {
+        router.push('/login');
       }
+    } else if (user.role !== 'instructor') {
+      router.push('/dashboard/student');
     }
+  }, [user, dispatch, router]);
 
-    fetchData()
-  }, [])
+  useEffect(() => {
+    if (user && user.role === 'instructor') {
+      const fetchData = async () => {
+        try {
+          // Simulación de carga de datos
+          const [studentsRes, quizzesRes] = await Promise.all([
+            fetch('/api/students'),
+            fetch('/api/quizzes/created')
+          ]);
 
-  if (loading) {
+          if (!studentsRes.ok || !quizzesRes.ok) {
+            throw new Error('Error al cargar datos');
+          }
+
+          const [studentsData, quizzesData] = await Promise.all([
+            studentsRes.json(),
+            quizzesRes.json()
+          ]);
+
+          setStudents(studentsData);
+          setQuizzes(quizzesData);
+        } catch (error: any) {
+          toast.error(error.message || 'Error al cargar datos');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchData();
+    }
+  }, [user]);
+
+  if (loading || !user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 text-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-400"></div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 text-white">
-      
+
       {/* Contenido principal con padding-top para el navbar fijo */}
       <main className="container mx-auto px-4 pt-24 pb-8">
         {/* Sección de bienvenida */}
         <section className="mb-12">
           <div className="bg-gradient-to-r from-indigo-800 to-purple-800 rounded-xl p-6 shadow-lg">
-            <h2 className="text-3xl font-bold mb-2">Bienvenido, {user?.name || 'Instructor'}!</h2>
+            <h2 className="text-3xl font-bold mb-2">Bienvenido, {user?.fullName || 'Instructor'}!</h2>
             <p className="text-gray-300">Gestiona tus cursos y sigue el progreso de tus estudiantes</p>
           </div>
         </section>
 
         {/* Estadísticas */}
         <section className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-          <StatCard 
+          <StatCard
             icon={<FaUsers className="text-yellow-400 text-xl" />}
             title="Estudiantes"
             value={students.length}
           />
-          <StatCard 
+          <StatCard
             icon={<FaFileAlt className="text-yellow-400 text-xl" />}
             title="Cuestionarios"
             value={quizzes.length}
           />
-          <StatCard 
+          <StatCard
             icon={<FaChartBar className="text-yellow-400 text-xl" />}
             title="Promedio General"
             value="7.8/10"
           />
-          <StatCard 
+          <StatCard
             icon={<FaUsers className="text-yellow-400 text-xl" />}
             title="Cursos Activos"
             value="4"
@@ -123,25 +164,25 @@ function StatCard({ icon, title, value }: { icon: React.ReactNode, title: string
 
 function QuickActions({ router }: { router: any }) {
   const actions = [
-    { 
+    {
       icon: <FaPlus className="text-yellow-400 text-xl" />,
       title: "Nuevo Cuestionario",
       description: "Crea un nuevo examen",
       onClick: () => router.push('/quiz/new')
     },
-    { 
+    {
       icon: <FaUsers className="text-yellow-400 text-xl" />,
       title: "Ver Estudiantes",
       description: "Gestiona tus alumnos",
       onClick: () => router.push('/students')
     },
-    { 
+    {
       icon: <FaChartBar className="text-yellow-400 text-xl" />,
       title: "Analíticas",
       description: "Ver estadísticas",
       onClick: () => router.push('/analytics')
     },
-    { 
+    {
       icon: <FaComments className="text-yellow-400 text-xl" />,
       title: "Evaluador IA",
       description: "Configura evaluaciones",
@@ -154,7 +195,7 @@ function QuickActions({ router }: { router: any }) {
       <h2 className="text-2xl font-bold mb-6">Acciones Rápidas</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {actions.map((action, index) => (
-          <button 
+          <button
             key={index}
             onClick={action.onClick}
             className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-yellow-400 transition-all text-left group"
@@ -180,7 +221,7 @@ function RecentStudents({ students, router }: { students: any[], router: any }) 
     <section className="mb-12">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Estudiantes Recientes</h2>
-        <button 
+        <button
           onClick={() => router.push('/students')}
           className="text-yellow-400 hover:text-yellow-300 flex items-center"
         >
@@ -218,7 +259,7 @@ function RecentStudents({ students, router }: { students: any[], router: any }) 
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <button 
+                  <button
                     onClick={() => router.push(`/student/${student.id}`)}
                     className="text-yellow-400 hover:text-yellow-300 text-sm"
                   >
@@ -239,7 +280,7 @@ function RecentQuizzes({ quizzes, router }: { quizzes: any[], router: any }) {
     <section>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Cuestionarios Recientes</h2>
-        <button 
+        <button
           onClick={() => router.push('/quizzes')}
           className="text-yellow-400 hover:text-yellow-300 flex items-center"
         >
@@ -270,13 +311,13 @@ function RecentQuizzes({ quizzes, router }: { quizzes: any[], router: any }) {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <button 
+                  <button
                     onClick={() => router.push(`/quiz/${quiz.id}/results`)}
                     className="text-yellow-400 hover:text-yellow-300 text-sm mr-4"
                   >
                     Resultados
                   </button>
-                  <button 
+                  <button
                     onClick={() => router.push(`/quiz/${quiz.id}/edit`)}
                     className="text-gray-300 hover:text-white text-sm"
                   >

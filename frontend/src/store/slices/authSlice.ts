@@ -1,9 +1,13 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { RootState } from '../index';
 
 interface UserData {
-  role: string | null;
-  fullName?: string;
-  email?: string;
+  id: string
+  role: 'student' | 'instructor'
+  email: string
+  fullName?: string
+  institution?: string
+  department?: string
 }
 
 interface AuthState {
@@ -13,10 +17,10 @@ interface AuthState {
 
 const initialState: AuthState = {
   user: null,
-  loading: true,
+  loading: false,
 };
 
-const authSlice = createSlice({
+export const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
@@ -24,14 +28,19 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.loading = false;
     },
-    logout: (state) => {
-      state.user = null;
-    },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
+    },
+    logout: (state) => {
+      state.user = null;
+      state.loading = false;
     },
   },
 });
 
-export const { setUser, logout, setLoading } = authSlice.actions;
+// Selectores
+export const selectCurrentUser = (state: RootState) => state.auth.user;
+export const selectAuthLoading = (state: RootState) => state.auth.loading;
+
+export const { setUser, setLoading, logout } = authSlice.actions;
 export default authSlice.reducer;

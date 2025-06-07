@@ -1,48 +1,74 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { comparePasswords } from '@/utils/hash';
-import { generateToken } from '@/utils/jwt';
+import jwt from 'jsonwebtoken';
 
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
 
+    // Validación básica
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: 'Email y contraseña son requeridos' },
+        { status: 400 }
+      );
+    }
+
     const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]) as any[];
     const user = rows[0];
 
     if (!user) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Credenciales inválidas' },
+        { status: 401 }
+      );
     }
 
-    const match = await comparePasswords(password, user.password);
-    if (!match) {
-      return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
+    const passwordMatch = await comparePasswords(password, user.password);
+    if (!passwordMatch) {
+      return NextResponse.json(
+        { error: 'Credenciales inválidas' },
+        { status: 401 }
+      );
     }
 
-    const token = generateToken({ id: user.id, role: user.role });
+    const tokenPayload = {
+      id: user.id,
+      role: user.role,
+      email: user.email,
+      fullName: user.full_name,
+      institution: user.institution,
+      department: user.department,
+    };
+
+    const token = jwt.sign(
+      tokenPayload,
+      process.env.JWT_SECRET!,
+      { expiresIn: '7d' }
+    );
 
     const response = NextResponse.json({
+      ...tokenPayload,
       token,
-      role: user.role,
-      fullName: user.full_name,
-      ...(user.role === 'student' && {
-        institution: user.institution
-      }),
-      ...(user.role === 'instructor' && {
-        department: user.department
-      })
     });
 
-    response.cookies.set('token', token, {
+    // Configurar cookie httpOnly para mayor seguridad
+    response.cookies.set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7, // 1 semana
-      path: '/'
+      path: '/',
     });
 
     return response;
+
   } catch (error) {
     console.error('Error en login:', error);
-    return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Error en el servidor' },
+      { status: 500 }
+    );
   }
 }
