@@ -1,6 +1,5 @@
 'use client'
 
-import InstructorNavbar from '../../../../components/dashboard/InstructorNavbar'
 import { FaUsers, FaFileAlt, FaChartBar, FaPlus, FaComments } from 'react-icons/fa'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -57,7 +56,6 @@ export default function InstructorDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 text-white">
-      <InstructorNavbar />
       
       {/* Contenido principal con padding-top para el navbar fijo */}
       <main className="container mx-auto px-4 pt-24 pb-8">

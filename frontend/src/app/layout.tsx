@@ -18,7 +18,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className}>
-        {/* Este componente será el wrapper de cliente */}
+        {/* Este layout se aplica solo fuera de /dashboard */}
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>

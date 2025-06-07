@@ -1,6 +1,5 @@
 'use client'
 
-import StudentNavbar from '../../../../components/dashboard/StudentNavbar'
 import { FaBook, FaChartLine, FaClipboardList, FaComments } from 'react-icons/fa'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -52,7 +51,6 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 text-white">
-      <StudentNavbar />
       
       <main className="container mx-auto px-4 pt-24 pb-8">
         {/* Sección de bienvenida */}
