@@ -1,8 +1,6 @@
 // app/page.tsx
 import { FaBrain, FaCode, FaChartLine, FaGraduationCap, FaRobot, FaArrowRight } from 'react-icons/fa';
 import { SiNextdotjs, SiTypescript, SiMysql, SiOpenai } from 'react-icons/si';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
 
 export default function Home() {
   const features = [
