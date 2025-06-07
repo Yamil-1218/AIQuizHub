@@ -6,17 +6,13 @@ import { FaBrain, FaTimes, FaBars, FaSignOutAlt, FaUser, FaChalkboardTeacher, Fa
 import { usePathname, useRouter } from 'next/navigation';
 import { verifyToken } from '@/utils/jwt';
 import toast from 'react-hot-toast';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '@/store';
+import { setUser, logout } from '@/store/slices/authSlice';
 
 // Interface para el payload del JWT
 interface JwtPayload {
   role: string;
-  fullName?: string;
-  email?: string;
-  // otras propiedades que pueda tener tu token
-}
-
-interface UserData {
-  role: string | null;
   fullName?: string;
   email?: string;
 }
@@ -24,9 +20,13 @@ interface UserData {
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [userData, setUserData] = useState<UserData>({ role: null });
   const pathname = usePathname();
   const router = useRouter();
+  
+  // Redux hooks
+  const dispatch = useDispatch<AppDispatch>();
+  const userData = useSelector((state: RootState) => state.auth.user);
+  const loading = useSelector((state: RootState) => state.auth.loading);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -42,18 +42,20 @@ export default function Navbar() {
           // Verificación de tipo segura
           if (typeof decoded === 'object' && decoded !== null && 'role' in decoded) {
             const payload = decoded as JwtPayload;
-            setUserData({ 
+            dispatch(setUser({ 
               role: payload.role,
               fullName: payload.fullName,
               email: payload.email
-            });
+            }));
           } else {
             // Token no tiene la estructura esperada
-            setUserData({ role: null });
+            dispatch(setUser(null));
           }
         } catch (error) {
-          setUserData({ role: null });
+          dispatch(setUser(null));
         }
+      } else {
+        dispatch(setUser(null));
       }
     };
 
@@ -63,18 +65,18 @@ export default function Navbar() {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [pathname]);
+  }, [pathname, dispatch]);
 
   const handleLogout = () => {
     document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    setUserData({ role: null });
+    dispatch(logout());
     toast.success('Sesión cerrada correctamente');
     router.push('/');
     setIsOpen(false);
   };
 
   const getDashboardLink = () => {
-    return userData.role === 'instructor' 
+    return userData?.role === 'instructor' 
       ? { 
           name: 'Panel Instructor', 
           path: '/dashboard/instructor', 
@@ -95,6 +97,24 @@ export default function Navbar() {
   ];
 
   const dashboardLink = getDashboardLink();
+
+  if (loading) {
+    return (
+      <header className="fixed w-full z-50 bg-gray-900/90 backdrop-blur-md py-2 shadow-lg">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center">
+            {/* Logo placeholder mientras carga */}
+            <div className="flex items-center space-x-2">
+              <FaBrain className="text-2xl text-yellow-400" />
+              <span className="text-xl font-bold bg-gradient-to-r from-yellow-400 to-indigo-400 bg-clip-text text-transparent">
+                AIQuizHub
+              </span>
+            </div>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-gray-900/90 backdrop-blur-md py-2 shadow-lg' : 'bg-transparent py-4'}`}>
@@ -119,7 +139,7 @@ export default function Navbar() {
                 {link.name}
               </Link>
             ))}
-            {userData.role && (
+            {userData?.role && (
               <Link
                 href={dashboardLink.path}
                 className={`px-1 py-2 font-medium transition ${pathname.startsWith('/dashboard') ? 'text-yellow-400 border-b-2 border-yellow-400' : 'text-white hover:text-yellow-300'}`}
@@ -131,23 +151,21 @@ export default function Navbar() {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            {userData.role ? (
+            {userData ? (
               <div className="flex items-center space-x-4">
-                <div className="flex items-center text-white group relative">
-                  <div className="flex items-center">
-                    <FaUser className="mr-2 text-yellow-400" />
-                    <span>{userData.fullName || (userData.role === 'instructor' ? 'Instructor' : 'Estudiante')}</span>
-                  </div>
-                  <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
-                    {userData.email}
-                  </div>
-                </div>
+                <button 
+                  onClick={() => router.push('/profile')}
+                  className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-all"
+                >
+                  <FaUser className="mr-2" />
+                  <span>{userData.fullName || (userData.role === 'instructor' ? 'Instructor' : 'Estudiante')}</span>
+                </button>
                 <button
                   onClick={handleLogout}
-                  className="px-4 py-2 flex items-center text-white hover:text-yellow-300 transition"
+                  className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-all"
                 >
                   <FaSignOutAlt className="mr-2" />
-                  Cerrar Sesión
+                  <span>Cerrar Sesión</span>
                 </button>
               </div>
             ) : (
@@ -198,7 +216,7 @@ export default function Navbar() {
                   {link.name}
                 </Link>
               ))}
-              {userData.role && (
+              {userData?.role && (
                 <Link
                   href={dashboardLink.path}
                   onClick={() => setIsOpen(false)}
@@ -210,15 +228,21 @@ export default function Navbar() {
               )}
               
               <div className="pt-2 border-t border-gray-700">
-                {userData.role ? (
+                {userData ? (
                   <>
-                    <div className="px-3 py-2 text-white flex items-center">
-                      <FaUser className="mr-2 text-yellow-400" />
+                    <button
+                      onClick={() => {
+                        router.push('/profile');
+                        setIsOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg flex items-center text-white hover:bg-gray-800"
+                    >
+                      <FaUser className="mr-2" />
                       <div>
                         <div>{userData.fullName || (userData.role === 'instructor' ? 'Instructor' : 'Estudiante')}</div>
                         <div className="text-xs text-gray-400">{userData.email}</div>
                       </div>
-                    </div>
+                    </button>
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-3 py-2 mt-2 rounded-lg flex items-center text-white hover:bg-gray-800"
