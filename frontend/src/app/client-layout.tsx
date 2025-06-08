@@ -8,8 +8,8 @@ import AuthRedirector from '../../components/AuthRedirector'
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
     <Provider store={store}>
-      <AuthRedirector />
       <Toaster position="top-right" />
+      <AuthRedirector />
       {children}
     </Provider>
   )

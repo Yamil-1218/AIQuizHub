@@ -15,6 +15,7 @@ interface AuthState {
   loading: boolean
   initialized: boolean
   error: string | null
+  justLoggedOut: boolean    
 }
 
 const initialState: AuthState = {
@@ -22,6 +23,7 @@ const initialState: AuthState = {
   loading: false,
   initialized: false,
   error: null,
+  justLoggedOut: false,      
 }
 
 export const authSlice = createSlice({
@@ -33,6 +35,7 @@ export const authSlice = createSlice({
       state.loading = false
       state.initialized = true
       state.error = null
+      state.justLoggedOut = false
     },
     updateUser: (state, action: PayloadAction<Partial<UserData>>) => {
       if (state.user) {
@@ -47,6 +50,7 @@ export const authSlice = createSlice({
       state.loading = false
       state.initialized = true
       state.error = null
+      state.justLoggedOut = true
     },
     setInitialized: (state) => {
       state.initialized = true
@@ -54,6 +58,9 @@ export const authSlice = createSlice({
     setError: (state, action: PayloadAction<string>) => {
       state.error = action.payload
       state.loading = false
+    },
+    resetJustLoggedOut: (state) => {
+      state.justLoggedOut = false
     },
   },
 })
@@ -65,6 +72,7 @@ export const {
   logout,
   setInitialized,
   setError,
+  resetJustLoggedOut,
 } = authSlice.actions
 
 export const selectCurrentUser = (state: RootState) => state.auth.user

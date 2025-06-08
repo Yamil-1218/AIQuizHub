@@ -4,63 +4,55 @@ import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState, AppDispatch } from '@/store'
-import { setUser, logout } from '@/store/slices/authSlice'
-import Cookies from 'js-cookie'
+import { useAuth } from '@/hooks/useAuth'
+import {
+  resetJustLoggedOut,
+} from '@/store/slices/authSlice'
 import toast from 'react-hot-toast'
 
 export default function AuthRedirector() {
   const router = useRouter()
   const pathname = usePathname()
   const dispatch = useDispatch<AppDispatch>()
-  const { user } = useSelector((state: RootState) => state.auth)
+
+  const { user, initialized, justLoggedOut } = useSelector(
+    (state: RootState) => state.auth
+  )
+
+  useAuth()
 
   useEffect(() => {
-    // Si ya hay usuario, no hace falta volver a verificar
-    if (user) return
+    if (!initialized) return
 
-    const checkAuth = async () => {
-      const token = Cookies.get('auth_token')
+    const isProtectedRoute =
+      pathname?.startsWith('/dashboard') || pathname?.startsWith('/profile')
 
-      if (!token) {
-        if (pathname?.startsWith('/dashboard') || pathname?.startsWith('/profile')) {
-          router.push('/login')
-          toast.error('Por favor inicia sesión')
+    if (!user) {
+      if (isProtectedRoute) {
+        if (!justLoggedOut) {
+          toast.error('Por favor inicia sesión') // Evita mostrarlo si recién cerró sesión
         }
-        dispatch(logout())
-        return
+        router.push('/login')
       }
-
-      try {
-        const res = await fetch('/api/auth/me')
-        const data = await res.json()
-
-        if (!res.ok) throw new Error(data.error)
-
-        dispatch(setUser(data.user))
-
-        if (pathname === '/login') {
-          router.push(`/dashboard/${data.user.role}`)
-        }
-
-        if (pathname?.startsWith('/dashboard')) {
-          const currentRole = pathname.split('/')[2]
-          if (data.user.role !== currentRole) {
-            router.push(`/dashboard/${data.user.role}`)
-          }
-        }
-
-      } catch (err) {
-        Cookies.remove('auth_token')
-        dispatch(logout())
-        if (pathname?.startsWith('/dashboard') || pathname?.startsWith('/profile')) {
-          router.push('/login')
-          toast.error('Sesión expirada, por favor inicia sesión nuevamente')
-        }
-      }
+      return
     }
 
-    checkAuth()
-  }, [pathname, router, dispatch, user])
+    // resetea el flag luego del redireccionamiento
+    if (justLoggedOut) {
+      dispatch(resetJustLoggedOut())
+    }
+
+    if (pathname === '/login') {
+      router.push(`/dashboard/${user.role}`)
+    }
+
+    if (pathname?.startsWith('/dashboard')) {
+      const currentRole = pathname.split('/')[2]
+      if (user.role !== currentRole) {
+        router.push(`/dashboard/${user.role}`)
+      }
+    }
+  }, [pathname, router, user, initialized, justLoggedOut, dispatch])
 
   return null
 }
