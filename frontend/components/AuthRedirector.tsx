@@ -15,6 +15,9 @@ export default function AuthRedirector() {
   const { user } = useSelector((state: RootState) => state.auth)
 
   useEffect(() => {
+    // Si ya hay usuario, no hace falta volver a verificar
+    if (user) return
+
     const checkAuth = async () => {
       const token = Cookies.get('auth_token')
 
@@ -35,6 +38,10 @@ export default function AuthRedirector() {
 
         dispatch(setUser(data.user))
 
+        if (pathname === '/login') {
+          router.push(`/dashboard/${data.user.role}`)
+        }
+
         if (pathname?.startsWith('/dashboard')) {
           const currentRole = pathname.split('/')[2]
           if (data.user.role !== currentRole) {
@@ -53,7 +60,7 @@ export default function AuthRedirector() {
     }
 
     checkAuth()
-  }, [pathname, router, dispatch])
+  }, [pathname, router, dispatch, user])
 
   return null
 }

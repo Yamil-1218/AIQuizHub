@@ -14,23 +14,25 @@ export default function StudentDashboard() {
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
+    if (!initialized) return;
+
     if (initialized && !user) {
       router.push('/login');
       return;
     }
 
-    if (initialized && user?.role !== 'student') {
+    if (user?.role !== 'student') {
       router.push('/dashboard/instructor');
-      return;
     }
   }, [user, initialized, router]);
+
 
   useEffect(() => {
     if (user?.role === 'student') {
       const fetchData = async () => {
         try {
           const quizzesRes = await fetch('/api/quizzes/available');
-          
+
           if (!quizzesRes.ok) {
             throw new Error('Error al cargar cuestionarios');
           }

@@ -1,32 +1,42 @@
 'use client'
-import { Inter } from 'next/font/google'
-import { usePathname } from 'next/navigation'
+
+import { useSelector } from 'react-redux'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+import { selectCurrentUser, selectAuthInitialized } from '@/store/slices/authSlice'
+import LoadingOverlay from '../../../components/LoadingOverlay'
 import StudentNavbar from '../../../components/dashboard/StudentNavbar'
 import InstructorNavbar from '../../../components/dashboard/InstructorNavbar'
-import { useSelector } from 'react-redux'
-import { RootState } from '@/store'
-import LoadingOverlay from '../../../components/LoadingOverlay'
+import { Inter } from 'next/font/google'
+import { usePathname } from 'next/navigation'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const user = useSelector(selectCurrentUser)
+  const initialized = useSelector(selectAuthInitialized)
+  const router = useRouter()
   const pathname = usePathname()
-  const { user, initialized } = useSelector((state: RootState) => state.auth)
+
+  useEffect(() => {
+    if (initialized && !user) {
+      router.replace('/login')
+    }
+  }, [initialized, user, router])
 
   if (!initialized) {
     return <LoadingOverlay />
   }
 
+  if (!user) {
+    // Aquí puede no mostrar nada porque estamos redirigiendo, o mostrar un loading
+    return null
+  }
+
   return (
     <div className={inter.className}>
-      {pathname?.includes('/student') ? <StudentNavbar /> : <InstructorNavbar />}
-      <main className="pt-20 px-4 min-h-screen">
-        {children}
-      </main>
+      {pathname.includes('/student') ? <StudentNavbar /> : <InstructorNavbar />}
+      <main className="pt-20 px-4 min-h-screen">{children}</main>
     </div>
   )
 }

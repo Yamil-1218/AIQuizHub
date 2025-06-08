@@ -1,3 +1,4 @@
+// app/login/page.tsx
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,19 +9,13 @@ import toast from 'react-hot-toast';
 import Link from 'next/link';
 
 export default function LoginPage() {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const dispatch = useDispatch();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,8 +34,19 @@ export default function LoginPage() {
         throw new Error(errorData.error || 'Error al iniciar sesión');
       }
 
-      // Forzar recarga completa para sincronizar estado
-      window.location.href = '/dashboard';
+      const data = await response.json();
+
+      // Guardar en Redux si lo estás usando
+      dispatch(setUser(data.user));
+
+      // Redirigir según el rol
+      if (data.user.role === 'student') {
+        router.push('/dashboard/student');
+      } else if (data.user.role === 'instructor') {
+        router.push('/dashboard/instructor');
+      } else {
+        router.push('/');
+      }
 
     } catch (error: any) {
       toast.error(error.message);
@@ -94,8 +100,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-medium text-gray-900 bg-yellow-400 hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all ${isLoading ? 'opacity-70 cursor-not-allowed' : ''
-              }`}
+            className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-medium text-gray-900 bg-yellow-400 hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             {isLoading ? (
               <span className="flex items-center">

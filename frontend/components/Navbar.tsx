@@ -4,21 +4,11 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { FaBrain, FaTimes, FaBars, FaSignOutAlt, FaUser, FaChalkboardTeacher, FaUserGraduate } from 'react-icons/fa';
 import { usePathname, useRouter } from 'next/navigation';
-import { verifyToken } from '@/utils/jwt';
-import toast from 'react-hot-toast';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
-import { setUser, logout } from '@/store/slices/authSlice';
+import { logout } from '@/store/slices/authSlice';
 import Cookies from 'js-cookie';
-
-interface JwtPayload {
-  id: string;
-  role: 'student' | 'instructor';
-  fullName?: string;
-  email?: string;
-  institution?: string;
-  department?: string;
-}
+import toast from 'react-hot-toast';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,7 +16,6 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Redux hooks
   const dispatch = useDispatch<AppDispatch>();
   const userData = useSelector((state: RootState) => state.auth.user);
   const loading = useSelector((state: RootState) => state.auth.loading);
@@ -36,30 +25,14 @@ export default function Navbar() {
       setScrolled(window.scrollY > 10);
     };
 
-    const checkAuth = async () => {
-      const token = Cookies.get('auth_token'); // Cambiado a auth_token
-      if (token) {
-        try {
-          const decoded = await verifyToken(token);
-          // ... resto del código igual
-        } catch (error) {
-          dispatch(logout());
-        }
-      } else {
-        dispatch(logout());
-      }
-    };
-
     window.addEventListener('scroll', handleScroll);
-    checkAuth();
-
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [pathname, dispatch]);
+  }, []);
 
   const handleLogout = () => {
-    Cookies.remove('auth_token'); // Cambiado a auth_token
+    Cookies.remove('auth_token');
     dispatch(logout());
     toast.success('Sesión cerrada correctamente');
     router.push('/');
@@ -68,18 +41,9 @@ export default function Navbar() {
 
   const getDashboardLink = () => {
     if (!userData) return null;
-
     return userData.role === 'instructor'
-      ? {
-        name: 'Panel Instructor',
-        path: '/dashboard/instructor',
-        icon: <FaChalkboardTeacher className="mr-2" />
-      }
-      : {
-        name: 'Mi Aprendizaje',
-        path: '/dashboard/student',
-        icon: <FaUserGraduate className="mr-2" />
-      };
+      ? { name: 'Panel Instructor', path: '/dashboard/instructor', icon: <FaChalkboardTeacher className="mr-2" /> }
+      : { name: 'Mi Aprendizaje', path: '/dashboard/student', icon: <FaUserGraduate className="mr-2" /> };
   };
 
   const navLinks = [
@@ -92,11 +56,11 @@ export default function Navbar() {
   const dashboardLink = getDashboardLink();
 
   if (loading) {
+    // Opcional: muestra un header sin botones mientras carga
     return (
       <header className="fixed w-full z-50 bg-gray-900/90 backdrop-blur-md py-2 shadow-lg">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
-            {/* Logo placeholder mientras carga */}
             <div className="flex items-center space-x-2">
               <FaBrain className="text-2xl text-yellow-400" />
               <span className="text-xl font-bold bg-gradient-to-r from-yellow-400 to-indigo-400 bg-clip-text text-transparent">
@@ -113,7 +77,6 @@ export default function Navbar() {
     <header className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-gray-900/90 backdrop-blur-md py-2 shadow-lg' : 'bg-transparent py-4'}`}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
-          {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <FaBrain className="text-2xl text-yellow-400" />
             <span className="text-xl font-bold bg-gradient-to-r from-yellow-400 to-indigo-400 bg-clip-text text-transparent">
@@ -121,7 +84,6 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             {navLinks.map((link) => (
               <Link
@@ -142,10 +104,9 @@ export default function Navbar() {
             )}
           </nav>
 
-          {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             {userData ? (
-              <div className="flex items-center space-x-4">
+              <>
                 <button
                   onClick={() => router.push('/profile')}
                   className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-all"
@@ -160,42 +121,26 @@ export default function Navbar() {
                   <FaSignOutAlt className="mr-2" />
                   <span>Cerrar Sesión</span>
                 </button>
-              </div>
+              </>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className="px-4 py-2 text-white hover:text-yellow-300 transition"
-                >
+                <Link href="/login" className="px-4 py-2 text-white hover:text-yellow-300 transition">
                   Iniciar Sesión
                 </Link>
-                <Link
-                  href="/register"
-                  className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold rounded-lg transition"
-                >
+                <Link href="/register" className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold rounded-lg transition">
                   Registrarse
                 </Link>
               </>
             )}
           </div>
 
-          {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="text-white focus:outline-none"
-              aria-label="Toggle menu"
-            >
-              {isOpen ? (
-                <FaTimes className="h-6 w-6" />
-              ) : (
-                <FaBars className="h-6 w-6" />
-              )}
+            <button onClick={() => setIsOpen(!isOpen)} className="text-white focus:outline-none" aria-label="Toggle menu">
+              {isOpen ? <FaTimes className="h-6 w-6" /> : <FaBars className="h-6 w-6" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {isOpen && (
           <div className="md:hidden mt-4 pb-4">
             <div className="flex flex-col space-y-3">
@@ -225,8 +170,8 @@ export default function Navbar() {
                   <>
                     <button
                       onClick={() => {
-                        router.push('/profile');
-                        setIsOpen(false);
+                        router.push('/profile')
+                        setIsOpen(false)
                       }}
                       className="w-full text-left px-3 py-2 rounded-lg flex items-center text-white hover:bg-gray-800"
                     >
@@ -246,18 +191,10 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
-                    <Link
-                      href="/login"
-                      onClick={() => setIsOpen(false)}
-                      className="block px-3 py-2 rounded-lg text-white hover:bg-gray-800"
-                    >
+                    <Link href="/login" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-lg text-white hover:bg-gray-800">
                       Iniciar Sesión
                     </Link>
-                    <Link
-                      href="/register"
-                      onClick={() => setIsOpen(false)}
-                      className="block px-3 py-2 mt-2 rounded-lg bg-yellow-400 text-gray-900 font-semibold"
-                    >
+                    <Link href="/register" onClick={() => setIsOpen(false)} className="block px-3 py-2 mt-2 rounded-lg bg-yellow-400 text-gray-900 font-semibold">
                       Registrarse
                     </Link>
                   </>
