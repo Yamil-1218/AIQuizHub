@@ -4,70 +4,39 @@ import { FaUsers, FaFileAlt, FaChartBar, FaPlus, FaComments } from 'react-icons/
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useDispatch, useSelector } from 'react-redux';
-import { setUser } from '@/store/slices/authSlice';
+import { useSelector } from 'react-redux';
 import { RootState } from '@/store/index';
-import jwt from 'jsonwebtoken';
-import Cookies from 'js-cookie';
 
 export default function InstructorDashboard() {
   const router = useRouter();
-  const dispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, initialized } = useSelector((state: RootState) => state.auth);
   const [students, setStudents] = useState<any[]>([]);
   const [quizzes, setQuizzes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      const token = Cookies.get('token');
-      if (token) {
-        try {
-          const decoded = jwt.decode(token) as {
-            id: string;
-            role: string;
-            fullName?: string;
-            email?: string;
-            institution?: string;
-            department?: string;
-          };
-
-          if (decoded && decoded.role === 'instructor') {
-            dispatch(setUser({
-              id: decoded.id, // Asegúrate de incluir el id
-              role: decoded.role,
-              email: decoded.email || '',
-              fullName: decoded.fullName,
-              ...(decoded.role === 'instructor' && { department: decoded.department })
-            }));
-          } else {
-            router.push('/dashboard/student');
-          }
-        } catch (err) {
-          console.error('Error decoding token:', err);
-          router.push('/login');
-        }
-      } else {
-        router.push('/login');
-      }
-    } else if (user.role !== 'instructor') {
-      router.push('/dashboard/student');
+    if (initialized && !user) {
+      router.push('/login');
+      return;
     }
-  }, [user, dispatch, router]);
+
+    if (initialized && user?.role !== 'instructor') {
+      router.push('/dashboard/student');
+      return;
+    }
+  }, [user, initialized, router]);
 
   useEffect(() => {
-    if (user && user.role === 'instructor') {
+    if (user?.role === 'instructor') {
       const fetchData = async () => {
         try {
-          // Simulación de carga de datos
           const [studentsRes, quizzesRes] = await Promise.all([
             fetch('/api/students'),
             fetch('/api/quizzes/created')
           ]);
 
-          if (!studentsRes.ok || !quizzesRes.ok) {
-            throw new Error('Error al cargar datos');
-          }
+          if (!studentsRes.ok) throw new Error('Error al cargar estudiantes');
+          if (!quizzesRes.ok) throw new Error('Error al cargar cuestionarios');
 
           const [studentsData, quizzesData] = await Promise.all([
             studentsRes.json(),
@@ -79,7 +48,7 @@ export default function InstructorDashboard() {
         } catch (error: any) {
           toast.error(error.message || 'Error al cargar datos');
         } finally {
-          setLoading(false);
+          setLoadingData(false);
         }
       };
 
@@ -87,7 +56,7 @@ export default function InstructorDashboard() {
     }
   }, [user]);
 
-  if (loading || !user) {
+  if (!initialized || loadingData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 text-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-400"></div>

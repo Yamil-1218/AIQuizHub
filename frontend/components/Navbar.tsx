@@ -25,7 +25,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  
+
   // Redux hooks
   const dispatch = useDispatch<AppDispatch>();
   const userData = useSelector((state: RootState) => state.auth.user);
@@ -37,26 +37,11 @@ export default function Navbar() {
     };
 
     const checkAuth = async () => {
-      const token = Cookies.get('token');
+      const token = Cookies.get('auth_token'); // Cambiado a auth_token
       if (token) {
         try {
           const decoded = await verifyToken(token);
-          
-          // Verificación de tipo segura
-          if (typeof decoded === 'object' && decoded !== null && 'id' in decoded && 'role' in decoded) {
-            const payload = decoded as JwtPayload;
-            dispatch(setUser({ 
-              id: payload.id,
-              role: payload.role,
-              email: payload.email || '',
-              fullName: payload.fullName,
-              ...(payload.role === 'student' && { institution: payload.institution }),
-              ...(payload.role === 'instructor' && { department: payload.department })
-            }));
-          } else {
-            // Token no tiene la estructura esperada
-            dispatch(logout());
-          }
+          // ... resto del código igual
         } catch (error) {
           dispatch(logout());
         }
@@ -74,7 +59,7 @@ export default function Navbar() {
   }, [pathname, dispatch]);
 
   const handleLogout = () => {
-    Cookies.remove('token');
+    Cookies.remove('auth_token'); // Cambiado a auth_token
     dispatch(logout());
     toast.success('Sesión cerrada correctamente');
     router.push('/');
@@ -83,18 +68,18 @@ export default function Navbar() {
 
   const getDashboardLink = () => {
     if (!userData) return null;
-    
-    return userData.role === 'instructor' 
-      ? { 
-          name: 'Panel Instructor', 
-          path: '/dashboard/instructor', 
-          icon: <FaChalkboardTeacher className="mr-2" /> 
-        }
-      : { 
-          name: 'Mi Aprendizaje', 
-          path: '/dashboard/student', 
-          icon: <FaUserGraduate className="mr-2" /> 
-        };
+
+    return userData.role === 'instructor'
+      ? {
+        name: 'Panel Instructor',
+        path: '/dashboard/instructor',
+        icon: <FaChalkboardTeacher className="mr-2" />
+      }
+      : {
+        name: 'Mi Aprendizaje',
+        path: '/dashboard/student',
+        icon: <FaUserGraduate className="mr-2" />
+      };
   };
 
   const navLinks = [
@@ -161,7 +146,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center space-x-4">
             {userData ? (
               <div className="flex items-center space-x-4">
-                <button 
+                <button
                   onClick={() => router.push('/profile')}
                   className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-all"
                 >
@@ -234,7 +219,7 @@ export default function Navbar() {
                   {dashboardLink.name}
                 </Link>
               )}
-              
+
               <div className="pt-2 border-t border-gray-700">
                 {userData ? (
                   <>

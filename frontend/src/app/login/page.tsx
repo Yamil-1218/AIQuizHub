@@ -3,21 +3,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { setUser } from '@/store/slices/authSlice';
-import Cookies from 'js-cookie';
-import { FaSignInAlt, FaGoogle, FaGithub } from 'react-icons/fa';
+import { FaSignInAlt } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
-
-interface LoginResponse {
-  token: string;
-  id: string;
-  role: 'student' | 'instructor';
-  email: string;
-  fullName: string;
-  institution?: string;
-  department?: string;
-  error?: string;
-}
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -46,36 +34,17 @@ export default function LoginPage() {
         body: JSON.stringify(formData),
       });
 
-      const data: LoginResponse = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Error al iniciar sesión');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al iniciar sesión');
       }
 
-      // Guardar token en cookies (no httpOnly para que Next.js pueda leerlo)
-      Cookies.set('auth_token', data.token, {
-        expires: 7,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-      });
-
-      // Actualizar estado de Redux
-      dispatch(setUser({
-        id: data.id,
-        role: data.role,
-        email: data.email,
-        fullName: data.fullName,
-        ...(data.role === 'student' && { institution: data.institution }),
-        ...(data.role === 'instructor' && { department: data.department }),
-      }));
-
-      // Redirección absoluta para garantizar carga completa
-      window.location.href = `/dashboard/${data.role}`;
+      // Forzar recarga completa para sincronizar estado
+      window.location.href = '/dashboard';
 
     } catch (error: any) {
       toast.error(error.message);
-      setFormData(prev => ({ ...prev, password: '' })); // Limpiar contraseña
+      setFormData(prev => ({ ...prev, password: '' }));
     } finally {
       setIsLoading(false);
     }
@@ -125,9 +94,8 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-medium text-gray-900 bg-yellow-400 hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all ${
-              isLoading ? 'opacity-70 cursor-not-allowed' : ''
-            }`}
+            className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-medium text-gray-900 bg-yellow-400 hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all ${isLoading ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
           >
             {isLoading ? (
               <span className="flex items-center">

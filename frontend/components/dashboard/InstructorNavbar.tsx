@@ -3,31 +3,33 @@
 import { FaChalkboardTeacher, FaSignOutAlt, FaUser } from 'react-icons/fa'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useDispatch, useSelector } from 'react-redux'
+import { useSelector } from 'react-redux'
 import { RootState } from '@/store/index'
+import { useDispatch } from 'react-redux'
 import { logout } from '@/store/slices/authSlice'
-import Cookies from 'js-cookie'
 import toast from 'react-hot-toast'
-import { useEffect } from 'react'
 
 export default function InstructorNavbar() {
   const router = useRouter()
   const dispatch = useDispatch()
   const { user } = useSelector((state: RootState) => state.auth)
 
-  const handleLogout = () => {
-    Cookies.remove('token')
-    dispatch(logout())
-    router.push('/login')
-    toast.success('Sesión cerrada correctamente')
-  }
+  const handleLogout = async () => {
+    try {
+      // Llamar al API de logout primero
+      await fetch('/api/auth/logout', {
+        method: 'POST'
+      })
 
-  // Redirigir si no es instructor
-  useEffect(() => {
-    if (user && user.role !== 'instructor') {
-      router.push('/dashboard/student')
+      // Limpiar frontend
+      dispatch(logout())
+      router.push('/login')
+      toast.success('Sesión cerrada correctamente')
+    } catch (error) {
+      toast.error('Error al cerrar sesión')
+      console.error('Logout error:', error)
     }
-  }, [user, router])
+  }
 
   return (
     <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 fixed w-full z-40">
@@ -36,15 +38,15 @@ export default function InstructorNavbar() {
           <Link href="/dashboard/instructor" className="text-2xl font-bold">
             Panel del Instructor
           </Link>
-          
+
           <div className="flex items-center space-x-4">
             {user && (
               <span className="hidden md:inline text-sm bg-yellow-400/20 text-yellow-400 px-3 py-1 rounded-full">
                 {user.fullName || 'Instructor'}
               </span>
             )}
-            
-            <button 
+
+            <button
               onClick={() => router.push('/profile')}
               className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-all"
               title="Perfil"
@@ -52,7 +54,7 @@ export default function InstructorNavbar() {
               <FaUser className="mr-2" />
               <span className="hidden sm:inline">Perfil</span>
             </button>
-            
+
             <button
               onClick={handleLogout}
               className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-all"

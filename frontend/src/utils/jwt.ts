@@ -1,11 +1,34 @@
-import jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken'
 
-const secret = process.env.JWT_SECRET || 'devsecret';
+const secret = process.env.JWT_SECRET || 'devsecret'
 
-export function generateToken(payload: object) {
-  return jwt.sign(payload, secret, { expiresIn: '7d' });
+interface DecodedToken {
+  id: string
+  role: 'student' | 'instructor'
+  email: string
+  fullName: string
+  institution?: string
+  department?: string
+  iat: number
+  exp: number
 }
 
-export function verifyToken(token: string) {
-  return jwt.verify(token, secret);
+export function generateToken(payload: Omit<DecodedToken, 'iat' | 'exp'>) {
+  return jwt.sign(payload, secret, { expiresIn: '7d' })
+}
+
+export async function verifyToken(token: string): Promise<DecodedToken> {
+  try {
+    const decoded = jwt.verify(token, secret) as DecodedToken
+    
+    // Validación adicional de la estructura
+    if (!decoded.id || !decoded.role || !decoded.email) {
+      throw new Error('Token con estructura inválida')
+    }
+
+    return decoded
+  } catch (error) {
+    console.error('Error en verificación de token:', error)
+    throw new Error('Token inválido o expirado')
+  }
 }
