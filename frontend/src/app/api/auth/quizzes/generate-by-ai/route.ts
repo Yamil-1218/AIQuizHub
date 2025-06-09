@@ -66,6 +66,11 @@ export async function POST(req: Request) {
       throw new Error('El contenido generado por Gemini no es JSON válido');
     }
 
+    // Si no hay título, asignar uno por defecto
+    if (!quizData.title || quizData.title.trim() === '') {
+      quizData.title = `Cuestionario de ${topic}`;
+    }
+
     // Insertar en tabla quizzes como borrador
     const [result]: any = await query(
       'INSERT INTO quizzes (title, instructor_id, topic, type, status, generated_by_ai) VALUES (?, ?, ?, ?, ?, ?)',
@@ -116,7 +121,10 @@ function generatePrompt(topic: string, numQuestions: number, questionType: strin
   }
 
   return `Genera un cuestionario sobre "${topic}" con ${numQuestions} preguntas ${typeInstruction}. 
-Devuelve un JSON con el formato: 
+Asegúrate de incluir un campo "title" con el título del cuestionario.
+
+Devuelve un JSON con el siguiente formato:
+
 {
   "title": "Título del cuestionario",
   "questions": [

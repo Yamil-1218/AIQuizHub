@@ -98,7 +98,7 @@ export default function QuizGeneratorForm() {
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               required
-              className="block w-full px-4 py-3 rounded-lg border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200"
+              className="block w-full px-4 py-3 rounded-lg border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200 text-gray-900"
               placeholder="Ej: Fundamentos de Programación"
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -164,9 +164,8 @@ export default function QuizGeneratorForm() {
           <button
             type="submit"
             disabled={isGenerating}
-            className={`w-full flex justify-center items-center px-6 py-3 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all duration-200 ${
-              isGenerating ? 'opacity-70 cursor-not-allowed' : ''
-            }`}
+            className={`w-full flex justify-center items-center px-6 py-3 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all duration-200 ${isGenerating ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
           >
             {isGenerating ? (
               <>

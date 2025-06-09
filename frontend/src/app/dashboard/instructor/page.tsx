@@ -83,12 +83,13 @@ export default function InstructorDashboard() {
           <StatCard
             icon={<FaUsers className="text-yellow-400 text-xl" />}
             title="Estudiantes"
-            value={students.length}
+            value="10"
           />
           <StatCard
             icon={<FaFileAlt className="text-yellow-400 text-xl" />}
             title="Cuestionarios"
             value={quizzes.length}
+            onClick={() => router.push('/dashboard/instructor/quizzes/list')}
           />
           <StatCard
             icon={<FaChartBar className="text-yellow-400 text-xl" />}
@@ -117,9 +118,9 @@ export default function InstructorDashboard() {
 }
 
 // Componentes auxiliares
-function StatCard({ icon, title, value }: { icon: React.ReactNode, title: string, value: string | number }) {
+function StatCard({ icon, title, value, onClick }: { icon: React.ReactNode, title: string, value: string | number, onClick?: () => void }) {
   return (
-    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-yellow-400 transition-all">
+    <div onClick={onClick} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-yellow-400 transition-all">
       <div className="flex items-center space-x-4">
         <div className="bg-yellow-400/20 p-3 rounded-full">
           {icon}
@@ -280,10 +281,22 @@ function RecentQuizzes({ quizzes, router }: { quizzes: any[], router: any }) {
                 <td className="px-6 py-4 whitespace-nowrap">24/30</td>
                 <td className="px-6 py-4 whitespace-nowrap">7.5/10</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="bg-green-400/20 text-green-400 px-2 py-1 rounded text-sm">
-                    Activo
+                  <span
+                    className={`px-2 py-1 rounded text-sm ${quiz.status === 'published'
+                      ? 'bg-green-400/20 text-green-400'
+                      : quiz.status === 'draft'
+                        ? 'bg-yellow-400/20 text-yellow-400'
+                        : 'bg-gray-400/20 text-gray-300'
+                      }`}
+                  >
+                    {quiz.status === 'published'
+                      ? 'Publicado'
+                      : quiz.status === 'draft'
+                        ? 'Borrador'
+                        : quiz.status}
                   </span>
                 </td>
+
                 <td className="px-6 py-4 whitespace-nowrap">
                   <button
                     onClick={() => router.push(`/quiz/${quiz.id}/results`)}
