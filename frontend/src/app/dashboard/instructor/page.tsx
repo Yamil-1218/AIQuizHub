@@ -27,14 +27,15 @@ export default function InstructorDashboard() {
   }, [user, initialized, router]);
 
   useEffect(() => {
+
     if (user?.role === 'instructor') {
       const fetchData = async () => {
         try {
           const [studentsRes, quizzesRes] = await Promise.all([
-            fetch('/api/students'),
-            fetch('/api/quizzes/created')
+            fetch('/api/auth/students'),
+            fetch('/api/auth/quizzes/created')
           ]);
-
+          
           if (!studentsRes.ok) throw new Error('Error al cargar estudiantes');
           if (!quizzesRes.ok) throw new Error('Error al cargar cuestionarios');
 
@@ -105,7 +106,8 @@ export default function InstructorDashboard() {
         <QuickActions router={router} />
 
         {/* Estudiantes recientes */}
-        <RecentStudents students={students.slice(0, 5)} router={router} />
+        <RecentStudents students={students.slice(-5).reverse()} router={router} /> {/*Reverse invierte el orden de los estudiantes para que el mas recente se muestre primero*/}
+
 
         {/* Cuestionarios recientes */}
         <RecentQuizzes quizzes={quizzes.slice(0, 5)} router={router} />
@@ -143,7 +145,7 @@ function QuickActions({ router }: { router: any }) {
       icon: <FaUsers className="text-yellow-400 text-xl" />,
       title: "Ver Estudiantes",
       description: "Gestiona tus alumnos",
-      onClick: () => router.push('/students')
+      onClick: () => router.push('/dashboard/instructor/registroStu')
     },
     {
       icon: <FaChartBar className="text-yellow-400 text-xl" />,
@@ -191,7 +193,7 @@ function RecentStudents({ students, router }: { students: any[], router: any }) 
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Estudiantes Recientes</h2>
         <button
-          onClick={() => router.push('/students')}
+          onClick={() => router.push('/dashboard/instructor/registroStu')}
           className="text-yellow-400 hover:text-yellow-300 flex items-center"
         >
           Ver todos <span className="ml-1">→</span>
@@ -215,12 +217,15 @@ function RecentStudents({ students, router }: { students: any[], router: any }) 
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center space-x-3">
                     <div className="bg-yellow-400/20 text-yellow-400 w-8 h-8 rounded-full flex items-center justify-center">
-                      {student.name.charAt(0)}
+                      {student.fullName.charAt(0)}
                     </div>
-                    <span>{student.name}</span>
+                    <span>{student.fullName}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">2023-11-15</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                {student.lastLogin ? new Date(student.lastLogin).toLocaleDateString() : 'Nunca'}
+                </td>
+
                 <td className="px-6 py-4 whitespace-nowrap">5</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="bg-green-400/20 text-green-400 px-2 py-1 rounded text-sm">
