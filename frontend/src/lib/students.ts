@@ -5,7 +5,16 @@ export async function deleteStudent(id: number) {
     method: 'DELETE',
   });
 
-  const data = await res.json();
+  let data;
+  try {
+    data = await res.json();
+  } catch (error) {
+    // Aquí capturas si no es JSON válido
+    return {
+      success: false,
+      message: 'Respuesta inválida del servidor (no es JSON)',
+    };
+  }
 
   if (!res.ok) {
     return { success: false, message: data.message || 'Error al eliminar estudiante' };
@@ -13,6 +22,7 @@ export async function deleteStudent(id: number) {
 
   return { success: true, message: data.message || 'Estudiante eliminado correctamente' };
 }
+
 
 
 export async function updateStudent(
@@ -26,7 +36,7 @@ export async function updateStudent(
   }
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const res = await fetch(`/[id]/${id}`, {
+    const res = await fetch(`/api/auth/students/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

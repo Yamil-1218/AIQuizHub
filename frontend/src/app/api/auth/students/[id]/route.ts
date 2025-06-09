@@ -2,7 +2,10 @@ import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
 // DELETE /api/auth/students/[id]
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   const studentId = Number(params.id);
 
   if (isNaN(studentId)) {
@@ -10,13 +13,16 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   }
 
   try {
-    const [result]: any = await db.query('DELETE FROM users WHERE id = ? AND role = "student"', [studentId]);
+    const [result]: any = await db.query(
+      'DELETE FROM users WHERE id = ? AND role = "student"',
+      [studentId]
+    );
 
     if (result.affectedRows === 0) {
       return NextResponse.json({ message: 'Estudiante no encontrado o ya eliminado' }, { status: 404 });
     }
 
-    return NextResponse.json({ message: 'Estudiante eliminado correctamente' });
+    return NextResponse.json({ message: 'Estudiante eliminado correctamente' }, { status: 200 });
   } catch (error) {
     console.error('Error al eliminar estudiante:', error);
     return NextResponse.json({ message: 'Error interno del servidor' }, { status: 500 });
