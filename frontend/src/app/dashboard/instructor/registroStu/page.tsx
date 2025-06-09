@@ -150,8 +150,8 @@ export default function RegisteredStudents() {
 
     {/* Aquí va el modal, dentro del return */}
     {isModalOpen && selectedStudent && (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white text-black rounded-lg p-6 w-full max-w-md shadow-xl">
+     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-white/10 backdrop-blur-lg border border-white/20 text-white rounded-lg p-6 w-full max-w-md shadow-xl">
           <h2 className="text-xl font-semibold mb-4">Editar Estudiante</h2>
 
           <form
