@@ -16,6 +16,7 @@ export async function POST(req: Request) {
         { status: 401 }
       );
     }
+    await db.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
 
     const tokenPayload = {
       id: user.id,
@@ -57,6 +58,7 @@ export async function POST(req: Request) {
     });
 
     return response;
+    
 
   } catch (error) {
     console.error('Error en login:', error);
