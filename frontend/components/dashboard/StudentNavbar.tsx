@@ -16,12 +16,10 @@ export default function StudentNavbar() {
 
   const handleLogout = async () => {
     try {
-      // Llamar al API de logout primero
       await fetch('/api/auth/logout', {
         method: 'POST'
       })
-      
-      // Limpiar frontend
+
       dispatch(logout())
       router.push('/login')
       toast.success('Sesión cerrada correctamente')
@@ -32,7 +30,7 @@ export default function StudentNavbar() {
   }
 
   return (
-    <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 fixed w-full z-40">
+    <header className="bg-white/5 border-b border-white/10 fixed w-full z-40">
       <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
           <Link href="/dashboard/student" className="text-2xl font-bold">
