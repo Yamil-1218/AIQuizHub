@@ -6,7 +6,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { FaEdit, FaTrash } from 'react-icons/fa';
 import { deleteStudent, updateStudent } from '@/lib/students';
-import toast from 'react-hot-toast';
+import { toast } from "react-toastify";
 
 interface Student {
   id: number;
@@ -122,23 +122,52 @@ export default function RegisteredStudents() {
                       <FaEdit />
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const confirmDelete = confirm(`¿Estás seguro de eliminar a ${student.fullName}?`);
-                        if (!confirmDelete) return;
-
-                        const result = await deleteStudent(student.id);
-                        toast[result.success ? 'success' : 'error'](result.message);
-
-                        if (result.success) {
-                          setStudents(prev => prev.filter(s => s.id !== student.id));
-                        }
-                      }}
-                      className="text-red-400 hover:text-red-300"
+                   <button
+                    type="button"
+                    onClick={() => {
+                      toast(
+                        ({ closeToast }) => (
+                          <div>
+                            <p>¿Estás seguro de eliminar a <strong>{student.fullName}</strong>?</p>
+                            <div style={{ marginTop: "10px", display: "flex", gap: "10px" }}>
+                              <button
+                                onClick={async () => {
+                                  const result = await deleteStudent(student.id);
+                                  toast[result.success ? 'success' : 'error'](result.message);
+                                  if (result.success) {
+                                    setStudents(prev => prev.filter(s => s.id !== student.id));
+                                  }
+                                  closeToast();
+                                }}
+                                style={{
+                                  backgroundColor: "red",
+                                  color: "white",
+                                  padding: "5px 10px",
+                                  borderRadius: "4px",
+                                }}
+                              >
+                                Sí, eliminar
+                              </button>
+                              <button
+                                onClick={closeToast}
+                                style={{
+                                  padding: "5px 10px",
+                                  borderRadius: "4px",
+                                  backgroundColor: "#ccc",
+                                }}
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ),
+                        { autoClose: false }
+                      );
+                    }}
+                    className="text-red-400 hover:text-red-300"
                     >
-                      <FaTrash />
-                    </button>
+                    <FaTrash />
+                  </button>
                   </td>
                 </tr>
               ))
@@ -150,8 +179,8 @@ export default function RegisteredStudents() {
 
     {/* Aquí va el modal, dentro del return */}
     {isModalOpen && selectedStudent && (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white text-black rounded-lg p-6 w-full max-w-md shadow-xl">
+     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-white/10 backdrop-blur-lg border border-white/20 text-white rounded-lg p-6 w-full max-w-md shadow-xl">
           <h2 className="text-xl font-semibold mb-4">Editar Estudiante</h2>
 
           <form

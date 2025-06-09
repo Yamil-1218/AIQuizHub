@@ -30,8 +30,9 @@ export async function DELETE(
 }
 
 // PUT /api/auth/students/[id]
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const studentId = Number(params.id);
+export async function PUT(req: Request,   context: { params: { id: string } }) {
+  const { id } = context.params; 
+  const studentId = Number(id);
 
   if (isNaN(studentId)) {
     return NextResponse.json({ message: 'ID inválido' }, { status: 400 });
