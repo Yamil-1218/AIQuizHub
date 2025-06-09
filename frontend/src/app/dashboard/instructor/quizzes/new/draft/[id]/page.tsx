@@ -2,11 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { useSelector } from 'react-redux'
-import { RootState } from '@/store/index'
 
 interface Question {
   id: string
@@ -24,14 +19,13 @@ export default function DraftQuizPage() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
 
-  const token = useSelector((state: RootState) => state.auth.token)
-
   useEffect(() => {
     async function fetchDraft() {
       try {
         const res = await fetch(`/api/quiz/draft/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include' // envia cookies automáticamente
         })
+        if (!res.ok) throw new Error('Error cargando cuestionario')
         const data = await res.json()
         setTitle(data.title)
         setQuestions(data.questions)
@@ -41,8 +35,8 @@ export default function DraftQuizPage() {
       }
     }
 
-    if (id && token) fetchDraft()
-  }, [id, token])
+    if (id) fetchDraft()
+  }, [id])
 
   const handleQuestionChange = (index: number, value: string) => {
     const updated = [...questions]
@@ -56,16 +50,16 @@ export default function DraftQuizPage() {
     setQuestions(updated)
   }
 
-  const handleTitleChange = (value: string) => setTitle(value)
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTitle(e.target.value)
+  }
 
   const handlePublish = async () => {
     try {
       const res = await fetch(`/api/quiz/publish/${id}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // enviar cookies también aquí
         body: JSON.stringify({ title, questions }),
       })
 
@@ -86,29 +80,40 @@ export default function DraftQuizPage() {
     <div className="p-4 space-y-4">
       <h1 className="text-2xl font-bold">Editar cuestionario</h1>
 
-      <Input
-        className="text-xl font-semibold"
+      <input
+        className="w-full border p-2 rounded text-xl font-semibold"
         value={title}
-        onChange={(e) => handleTitleChange(e.target.value)}
+        onChange={handleTitleChange}
         placeholder="Título del cuestionario"
       />
 
       {questions.map((q, index) => (
         <div key={index} className="border p-4 rounded-xl space-y-2 bg-gray-50">
-          <Textarea
+          <textarea
+            className="w-full border p-2 rounded"
             value={q.question}
-            onChange={(e) => handleQuestionChange(index, e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+              handleQuestionChange(index, e.target.value)
+            }
             placeholder={`Pregunta ${index + 1}`}
           />
-          <Input
+          <input
+            className="w-full border p-2 rounded"
             value={q.answer}
-            onChange={(e) => handleAnswerChange(index, e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              handleAnswerChange(index, e.target.value)
+            }
             placeholder="Respuesta correcta"
           />
         </div>
       ))}
 
-      <Button onClick={handlePublish} className="mt-4">Publicar cuestionario</Button>
+      <button
+        onClick={handlePublish}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+      >
+        Publicar cuestionario
+      </button>
     </div>
   )
 }

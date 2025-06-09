@@ -1,82 +1,87 @@
-'use client'
+// components/QuizGeneratorForm.tsx
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
 
-export default function QuizGeneratorForm() {
-  const router = useRouter()
-  const [topic, setTopic] = useState('')
-  const [count, setCount] = useState(5)
-  const [type, setType] = useState('multiple-choice')
-  const [loading, setLoading] = useState(false)
+const QuizGeneratorForm = () => {
+  const [topic, setTopic] = useState('');
+  const [numQuestions, setNumQuestions] = useState(5);
+  const [questionType, setQuestionType] = useState('multiple_choice');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      const res = await fetch('/api/quizzes/generate-by-ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, count, type }),
-      })
+    e.preventDefault();
+    setLoading(true);
 
-      const data = await res.json()
-      if (res.ok) {
-        // Redirigir a vista de edición del borrador generado
-        router.push(`/dashboard/instructor/quizzes/draft/${data.draftId}`)
-      } else {
-        alert(data.error || 'Error generando el cuestionario')
+    try {
+      const response = await axios.post('/api/auth/quizzes/created/generate-by-ai', {
+        topic,
+        numQuestions,
+        questionType,
+      });
+
+      if (response.status === 200) {
+        const quizId = response.data.quizId;
+        router.push(`/dashboard/instructor/quizzes/new/draft/${quizId}`);
       }
-    } catch (err) {
-      alert('Error de red')
+    } catch (error) {
+      console.error('Error generando cuestionario:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
-      <h2 className="text-xl font-bold">Generar Cuestionario por IA</h2>
-
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block font-medium">Tema</label>
+        <label className="block font-semibold">Tema</label>
         <input
-          className="w-full border p-2 rounded"
+          type="text"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
+          className="w-full border px-3 py-2 rounded"
           required
         />
       </div>
 
       <div>
-        <label className="block font-medium">Cantidad de preguntas</label>
+        <label className="block font-semibold">Cantidad de preguntas</label>
         <input
           type="number"
-          className="w-full border p-2 rounded"
-          value={count}
           min={1}
-          max={20}
-          onChange={(e) => setCount(parseInt(e.target.value))}
+          max={50}
+          value={numQuestions}
+          onChange={(e) => setNumQuestions(parseInt(e.target.value))}
+          className="w-full border px-3 py-2 rounded"
+          required
         />
       </div>
 
       <div>
-        <label className="block font-medium">Tipo</label>
+        <label className="block font-semibold">Tipo de pregunta</label>
         <select
-          className="w-full border p-2 rounded"
-          value={type}
-          onChange={(e) => setType(e.target.value)}
+          value={questionType}
+          onChange={(e) => setQuestionType(e.target.value)}
+          className="w-full border px-3 py-2 rounded"
         >
-          <option value="multiple-choice">Opción múltiple</option>
-          <option value="true-false">Verdadero / Falso</option>
-          <option value="short-answer">Respuesta corta</option>
+          <option value="multiple_choice">Opción múltiple</option>
+          <option value="true_false">Verdadero/Falso</option>
+          <option value="short_answer">Respuesta corta</option>
         </select>
       </div>
 
-      <Button type="submit" disabled={loading}>
-        {loading ? 'Generando...' : 'Generar cuestionario'}
-      </Button>
+      <button
+        type="submit"
+        disabled={loading}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+      >
+        {loading ? 'Generando...' : 'Generar con IA'}
+      </button>
     </form>
-  )
-}
+  );
+};
+
+export default QuizGeneratorForm;

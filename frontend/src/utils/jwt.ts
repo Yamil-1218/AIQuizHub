@@ -32,3 +32,12 @@ export async function verifyToken(token: string): Promise<DecodedToken> {
     throw new Error('Token inválido o expirado')
   }
 }
+
+export async function getUserFromToken(token: string) {
+  try {
+    const user = await verifyToken(token);
+    return user;
+  } catch (error) {
+    return null;
+  }
+}
