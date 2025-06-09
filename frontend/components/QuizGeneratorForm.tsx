@@ -1,4 +1,3 @@
-// components/QuizGeneratorForm.tsx
 'use client';
 
 import { useState } from 'react';

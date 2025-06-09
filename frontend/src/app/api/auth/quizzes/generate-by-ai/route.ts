@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getUserFromToken } from '@/utils/jwt';
 
+function extractJSONFromCodeBlock(text: string): string {
+  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  return jsonMatch ? jsonMatch[1].trim() : text.trim();
+}
+
 export async function POST(req: Request) {
   try {
     const token = req.headers.get('cookie')?.split('auth_token=')[1]?.split(';')[0];
@@ -13,10 +18,8 @@ export async function POST(req: Request) {
 
     const { topic, numQuestions, questionType } = await req.json();
 
-    // Generar prompt para Gemini
     const prompt = generatePrompt(topic, numQuestions, questionType);
 
-    // Preparar payload para Gemini
     const body = {
       contents: [
         {
@@ -29,7 +32,6 @@ export async function POST(req: Request) {
       ]
     };
 
-    // Llamar API Gemini
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
@@ -48,35 +50,47 @@ export async function POST(req: Request) {
     }
 
     const data = await res.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    console.log('Respuesta completa de Gemini:', JSON.stringify(data, null, 2));
-
-    // Extraer contenido generado
-    const quizContent = data?.candidates?.[0]?.output;
-
-    if (!quizContent) {
-      console.error('No se encontró contenido generado en Gemini:', data);
-      throw new Error('No se recibió contenido válido de Gemini');
+    if (!rawText) {
+      throw new Error('No se encontró contenido generado por Gemini');
     }
 
-    // Parsear JSON generado por Gemini
+    const jsonText = extractJSONFromCodeBlock(rawText);
+
     let quizData;
     try {
-      quizData = JSON.parse(quizContent);
+      quizData = JSON.parse(jsonText);
     } catch (err) {
-      console.error('Error al parsear JSON generado:', quizContent, err);
+      console.error('Error al parsear JSON generado:', jsonText, err);
       throw new Error('El contenido generado por Gemini no es JSON válido');
     }
 
-    // Guardar en base de datos
+    // Insertar en tabla quizzes como borrador
     const [result]: any = await query(
-      'INSERT INTO quizzes (title, instructor_id, questions, status) VALUES (?, ?, ?, ?)',
-      [quizData.title, user.id, JSON.stringify(quizData.questions), 'draft']
+      'INSERT INTO quizzes (title, instructor_id, topic, type, status, generated_by_ai) VALUES (?, ?, ?, ?, ?, ?)',
+      [quizData.title, user.id, topic, questionType, 'draft', 1]
     );
+
+    const quizId = result.insertId;
+
+    // Insertar cada pregunta
+    for (const q of quizData.questions) {
+      await query(
+        'INSERT INTO questions (quiz_id, question_text, question_type, options, correct_answer) VALUES (?, ?, ?, ?, ?)',
+        [
+          quizId,
+          q.question ?? '',
+          q.type ?? 'short_answer',
+          q.options ? JSON.stringify(q.options) : null,
+          q.correctAnswer ?? null
+        ]
+      );
+    }
 
     return NextResponse.json(
       {
-        quizId: result.insertId,
+        quizId,
         title: quizData.title,
         questions: quizData.questions,
       },

@@ -8,6 +8,5 @@ export const db = mysql.createPool({
 });
 
 export async function query(sql: string, values?: any[]) {
-  const [rows] = await db.execute(sql, values);
-  return rows;
+  return db.execute(sql, values); // <- devuelve [rows, fields]
 }

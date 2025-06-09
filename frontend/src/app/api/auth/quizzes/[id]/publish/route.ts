@@ -1,4 +1,3 @@
-// src/app/api/auth/quizzes/[id]/publish/route.ts
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getUserFromToken } from '@/utils/jwt';
