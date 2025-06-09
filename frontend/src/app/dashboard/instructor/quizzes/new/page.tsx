@@ -1,3 +1,6 @@
+// src/app/dashboard/instructor/quizzes/new/page.tsx
+'use client';
+
 import QuizGeneratorForm from '../../../../../../components/QuizGeneratorForm'
 
 export default function NewQuizPage() {

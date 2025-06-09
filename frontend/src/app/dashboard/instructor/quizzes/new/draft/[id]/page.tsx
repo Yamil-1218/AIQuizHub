@@ -1,119 +1,102 @@
-'use client'
+// src/app/dashboard/instructor/quizzes/new/draft/[id]/page.tsx
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
-interface Question {
-  id: string
-  question: string
-  options?: string[]
-  answer: string
-}
-
-export default function DraftQuizPage() {
-  const router = useRouter()
-  const params = useParams()
-  const { id } = params
-
-  const [title, setTitle] = useState('')
-  const [questions, setQuestions] = useState<Question[]>([])
-  const [loading, setLoading] = useState(true)
+export default function DraftQuizPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
+  const [quiz, setQuiz] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchDraft() {
+    const fetchQuiz = async () => {
       try {
-        const res = await fetch(`/api/quiz/draft/${id}`, {
-          credentials: 'include' // envia cookies automáticamente
-        })
-        if (!res.ok) throw new Error('Error cargando cuestionario')
-        const data = await res.json()
-        setTitle(data.title)
-        setQuestions(data.questions)
-        setLoading(false)
-      } catch (err) {
-        console.error('Error al cargar el cuestionario:', err)
+        const response = await fetch(`/api/auth/quizzes/${params.id}`);
+        const data = await response.json();
+        
+        if (!response.ok) throw new Error(data.error || 'Error cargando cuestionario');
+        
+        setQuiz(data);
+      } catch (error: any) {
+        toast.error(error.message);
+        router.push('/dashboard/instructor');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
 
-    if (id) fetchDraft()
-  }, [id])
-
-  const handleQuestionChange = (index: number, value: string) => {
-    const updated = [...questions]
-    updated[index].question = value
-    setQuestions(updated)
-  }
-
-  const handleAnswerChange = (index: number, value: string) => {
-    const updated = [...questions]
-    updated[index].answer = value
-    setQuestions(updated)
-  }
-
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(e.target.value)
-  }
+    fetchQuiz();
+  }, [params.id, router]);
 
   const handlePublish = async () => {
     try {
-      const res = await fetch(`/api/quiz/publish/${id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // enviar cookies también aquí
-        body: JSON.stringify({ title, questions }),
-      })
-
-      if (res.ok) {
-        router.push('/dashboard/instructor/quizzes')
-      } else {
-        const error = await res.json()
-        console.error('Error publicando cuestionario:', error.message)
-      }
-    } catch (err) {
-      console.error('Error en publicación:', err)
+      const response = await fetch(`/api/auth/quizzes/${params.id}/publish`, {
+        method: 'PUT'
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Error publicando cuestionario');
+      
+      toast.success('Cuestionario publicado con éxito');
+      router.push(`/quiz/${params.id}/edit`);
+    } catch (error: any) {
+      toast.error(error.message);
     }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-400"></div>
+      </div>
+    );
   }
 
-  if (loading) return <p className="p-4">Cargando cuestionario...</p>
-
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">Editar cuestionario</h1>
-
-      <input
-        className="w-full border p-2 rounded text-xl font-semibold"
-        value={title}
-        onChange={handleTitleChange}
-        placeholder="Título del cuestionario"
-      />
-
-      {questions.map((q, index) => (
-        <div key={index} className="border p-4 rounded-xl space-y-2 bg-gray-50">
-          <textarea
-            className="w-full border p-2 rounded"
-            value={q.question}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              handleQuestionChange(index, e.target.value)
-            }
-            placeholder={`Pregunta ${index + 1}`}
-          />
-          <input
-            className="w-full border p-2 rounded"
-            value={q.answer}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              handleAnswerChange(index, e.target.value)
-            }
-            placeholder="Respuesta correcta"
-          />
+    <div className="max-w-4xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-4">Borrador: {quiz?.title}</h1>
+      
+      <div className="bg-white/5 p-6 rounded-lg mb-6">
+        <h2 className="text-xl font-semibold mb-4">Preguntas</h2>
+        <div className="space-y-6">
+          {quiz?.questions?.map((q: any, index: number) => (
+            <div key={index} className="border-b border-white/10 pb-4">
+              <p className="font-medium mb-2">{index + 1}. {q.question}</p>
+              {q.options && (
+                <ul className="ml-6 list-disc">
+                  {q.options.map((opt: string, i: number) => (
+                    <li key={i} className={i === q.correctAnswer ? 'text-green-400' : ''}>
+                      {opt}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {q.type === 'short_answer' && (
+                <p className="text-sm text-gray-400 mt-1">
+                  Respuesta correcta: {q.correctAnswer}
+                </p>
+              )}
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
 
-      <button
-        onClick={handlePublish}
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-      >
-        Publicar cuestionario
-      </button>
+      <div className="flex justify-end space-x-4">
+        <button
+          onClick={() => router.push('/dashboard/instructor')}
+          className="px-4 py-2 border border-white/20 rounded hover:bg-white/10"
+        >
+          Guardar borrador
+        </button>
+        <button
+          onClick={handlePublish}
+          className="px-4 py-2 bg-yellow-600 rounded hover:bg-yellow-700"
+        >
+          Publicar cuestionario
+        </button>
+      </div>
     </div>
-  )
+  );
 }

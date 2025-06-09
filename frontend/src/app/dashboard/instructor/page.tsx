@@ -35,7 +35,7 @@ export default function InstructorDashboard() {
             fetch('/api/auth/students'),
             fetch('/api/auth/quizzes/created')
           ]);
-          
+
           if (!studentsRes.ok) throw new Error('Error al cargar estudiantes');
           if (!quizzesRes.ok) throw new Error('Error al cargar cuestionarios');
 
@@ -139,7 +139,7 @@ function QuickActions({ router }: { router: any }) {
       icon: <FaPlus className="text-yellow-400 text-xl" />,
       title: "Nuevo Cuestionario",
       description: "Crea un nuevo examen",
-      onClick: () => router.push('/quiz/new')
+      onClick: () => router.push('/dashboard/instructor/quizzes/new')
     },
     {
       icon: <FaUsers className="text-yellow-400 text-xl" />,
@@ -223,7 +223,7 @@ function RecentStudents({ students, router }: { students: any[], router: any }) 
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                {student.lastLogin ? new Date(student.lastLogin).toLocaleDateString() : 'Nunca'}
+                  {student.lastLogin ? new Date(student.lastLogin).toLocaleDateString() : 'Nunca'}
                 </td>
 
                 <td className="px-6 py-4 whitespace-nowrap">5</td>
