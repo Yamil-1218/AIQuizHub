@@ -1,6 +1,7 @@
 // app/page.tsx
 import { FaBrain, FaCode, FaChartLine, FaGraduationCap, FaRobot, FaArrowRight } from 'react-icons/fa';
-import { SiNextdotjs, SiTypescript, SiMysql, SiOpenai } from 'react-icons/si';
+import { SiNextdotjs, SiTypescript, SiMysql } from 'react-icons/si';
+import { MdStars } from 'react-icons/md';
 
 export default function Home() {
   const features = [
@@ -30,7 +31,7 @@ export default function Home() {
     { icon: <SiNextdotjs className="text-4xl" />, name: "Next.js" },
     { icon: <SiTypescript className="text-4xl" />, name: "TypeScript" },
     { icon: <SiMysql className="text-4xl" />, name: "MySQL" },
-    { icon: <SiOpenai className="text-4xl" />, name: "OpenAI API" }
+    { icon: <MdStars className="text-4xl" />, name: "Gemini API" }
   ];
 
   return (
@@ -63,6 +64,7 @@ export default function Home() {
               >
                 Ver Demostración
               </a>
+
             </div>
           </div>
         </div>
