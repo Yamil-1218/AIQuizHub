@@ -273,3 +273,4 @@ export default function DraftQuizPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+

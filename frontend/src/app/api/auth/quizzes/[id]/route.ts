@@ -109,3 +109,40 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     return NextResponse.json({ error: 'Error obteniendo cuestionario' }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
+
+  try {
+    const token = req.headers.get('cookie')?.split('auth_token=')[1]?.split(';')[0];
+    const user = token ? await getUserFromToken(token) : null;
+
+    if (!user || user.role !== 'instructor') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const [quiz]: any = await query(
+      'SELECT instructor_id FROM quizzes WHERE id = ?',
+      [id]
+    );
+
+    if (!quiz || quiz.instructor_id !== user.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+
+    // Elimina preguntas relacionadas primero
+    await query('DELETE FROM questions WHERE quiz_id = ?', [id]);
+
+    // Luego elimina el cuestionario
+    const result: any = await query('DELETE FROM quizzes WHERE id = ?', [id]);
+
+    if (result.affectedRows === 0) {
+      return NextResponse.json({ error: 'Cuestionario no encontrado' }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: 'Cuestionario eliminado correctamente' }, { status: 200 });
+  } catch (err) {
+    console.error('Error eliminando cuestionario:', err);
+    return NextResponse.json({ error: 'Error eliminando cuestionario' }, { status: 500 });
+  }
+}

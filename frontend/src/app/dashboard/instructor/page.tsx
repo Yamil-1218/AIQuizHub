@@ -158,8 +158,9 @@ function QuickActions({ router }: { router: any }) {
       icon: <FaComments className="text-yellow-400 text-xl" />,
       title: "Evaluador IA",
       description: "Configura evaluaciones",
-      onClick: () => router.push('/ai-evaluator')
+      onClick: () => window.open('https://ai.google.dev/gemini-api/docs', '_blank')
     }
+
   ]
 
   return (
@@ -305,11 +306,12 @@ function RecentQuizzes({ quizzes, router }: { quizzes: any[], router: any }) {
                     Resultados
                   </button>
                   <button
-                    onClick={() => router.push(`/quiz/${quiz.id}/edit`)}
+                    onClick={() => router.push(`/dashboard/instructor/quizzes/${quiz.id}/edit`)}
                     className="text-gray-300 hover:text-white text-sm"
                   >
                     Editar
                   </button>
+
                 </td>
               </tr>
             ))}

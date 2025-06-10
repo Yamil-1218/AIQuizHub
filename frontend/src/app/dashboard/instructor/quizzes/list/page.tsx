@@ -5,7 +5,7 @@ import axios from "axios";
 import { FiLoader, FiPlus, FiEdit2, FiEye, FiTrash2, FiSearch } from "react-icons/fi";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-
+import { toast } from 'react-toastify';
 
 interface Quiz {
     id: number;
@@ -22,6 +22,8 @@ export default function QuizListPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [filter, setFilter] = useState<"all" | "draft" | "published">("all");
+    const [quizToDelete, setQuizToDelete] = useState<number | null>(null);
+
     const router = useRouter();
 
     useEffect(() => {
@@ -50,6 +52,36 @@ export default function QuizListPage() {
         const matchesFilter = filter === "all" || quiz.status === filter;
         return matchesSearch && matchesFilter;
     });
+
+    const confirmDelete = (quizId: number) => {
+        setQuizToDelete(quizId);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!quizToDelete) return;
+
+        try {
+            const res = await fetch(`/api/auth/quizzes/${quizToDelete}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+            if (res.ok) {
+                toast.success("Cuestionario eliminado");
+                setQuizzes((prev) => prev.filter((q) => q.id !== quizToDelete));
+            } else {
+                const data = await res.json();
+                toast.error(data.message || "Error al eliminar cuestionario");
+            }
+        } catch (error) {
+            toast.error("Error de red al eliminar");
+        } finally {
+            setQuizToDelete(null); // cerrar modal
+        }
+    };
+
+    const handleCancelDelete = () => {
+        setQuizToDelete(null);
+    };
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100">
@@ -120,12 +152,12 @@ export default function QuizListPage() {
                                     : "Aún no has creado ningún cuestionario"}
                             </p>
                             {!searchTerm && filter === "all" && (
-                                <Link
-                                    href="/quizzes/new"
+                                <button
+                                    onClick={() => router.push('/dashboard/instructor/quizzes/new')}
                                     className="mt-4 inline-flex items-center gap-2 text-blue-400 hover:text-blue-300"
                                 >
                                     <FiPlus /> Crear mi primer cuestionario
-                                </Link>
+                                </button>
                             )}
                         </div>
                     ) : (
@@ -175,13 +207,14 @@ export default function QuizListPage() {
                                                 </Link>
 
                                                 <Link
-                                                    href={`/quizzes/${quiz.id}/preview`}
+                                                    href={`/dashboard/instructor/quizzes/${quiz.id}/edit`}
                                                     className="p-2 text-gray-400 hover:text-green-400 hover:bg-gray-700 rounded-lg transition-colors"
                                                     title="Vista previa"
                                                 >
                                                     <FiEye />
                                                 </Link>
                                                 <button
+                                                    onClick={() => confirmDelete(quiz.id)}
                                                     className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-colors"
                                                     title="Eliminar"
                                                 >
@@ -196,6 +229,30 @@ export default function QuizListPage() {
                     )}
                 </div>
             </div>
+
+            {/* Modal de confirmación */}
+            {quizToDelete !== null && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-gray-800 p-6 rounded-lg max-w-sm w-full text-white">
+                        <h3 className="text-lg font-semibold mb-4">Confirmar eliminación</h3>
+                        <p className="mb-6">¿Seguro quieres eliminar este cuestionario?</p>
+                        <div className="flex justify-end gap-4">
+                            <button
+                                onClick={handleCancelDelete}
+                                className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleConfirmDelete}
+                                className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+                            >
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
