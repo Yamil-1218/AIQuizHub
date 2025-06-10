@@ -33,11 +33,28 @@ useEffect(() => {
     const fetchData = async () => {
       try {
         const quizzesRes = await fetch('/api/auth/quizzes/available');
+        const statusesRes = await fetch('/api/auth/students/quiz_statuses');
         const avgRes = await fetch('/api/auth/students/average-score');
 
         if (!quizzesRes.ok) throw new Error('Error al cargar cuestionarios');
+        if (!statusesRes.ok) throw new Error('Error al cargar estados');
+
         const quizzesData = await quizzesRes.json();
-        setQuizzes(Array.isArray(quizzesData[0]) ? quizzesData[0] : quizzesData);
+        const statusesData = await statusesRes.json();
+
+        // Map de estados { quizId => status }
+        const statusMap = new Map<number, string>();
+        statusesData.forEach((q: any) => {
+          statusMap.set(q.id, q.status);
+        });
+
+        // Combinar: añadir status a cada quiz
+        const quizzesWithStatus = (Array.isArray(quizzesData[0]) ? quizzesData[0] : quizzesData).map((quiz: any) => ({
+          ...quiz,
+          status: statusMap.get(quiz.id) || 'Disponible',
+        }));
+
+        setQuizzes(quizzesWithStatus);
 
         if (avgRes.ok) {
           const { average, attemptsCount } = await avgRes.json();
@@ -55,6 +72,7 @@ useEffect(() => {
     fetchData();
   }
 }, [user]);
+
 
 
   if (!initialized || loadingData) {
@@ -124,7 +142,15 @@ function StatCard({ icon, title, value }: { icon: React.ReactNode, title: string
 
 function AvailableQuizzes({ quizzes }: { quizzes: any[] }) {
   const [selectedQuiz, setSelectedQuiz] = useState<any | null>(null);
-  const router = useRouter(); // ✅ Importar router
+  const router = useRouter();
+
+  const tipoTraducciones: Record<string, string> = {
+    "multiple_choice": "Opción múltiple",
+    "true_false": "Verdadero/Falso",
+    "short_answer": "Respuesta corta",
+    "essay": "Ensayo",
+    // Agrega más traducciones según tus tipos
+  };
 
   return (
     <section className="mb-12">
@@ -143,29 +169,44 @@ function AvailableQuizzes({ quizzes }: { quizzes: any[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
-            {quizzes.map((quiz, index) => (
-              <tr key={index} className="hover:bg-white/10 transition-all cursor-default">
-                <td className="px-6 py-4 whitespace-nowrap font-semibold">{quiz.title}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{quiz.type}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{quiz.topic}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="bg-green-400/20 text-green-400 px-2 py-1 rounded text-sm">
-                    {quiz.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {quiz.created_at ? new Date(quiz.created_at).toLocaleDateString('es-ES') : '—'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <button
-                    onClick={() => setSelectedQuiz(quiz)}
-                    className="text-yellow-400 hover:text-yellow-300 text-sm font-medium underline"
-                  >
-                    Saber más
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {quizzes.map((quiz, index) => {
+              const isCompleted = quiz.status === 'Completado';
+              return (
+                <tr key={index} className="hover:bg-white/10 transition-all cursor-default">
+                  <td className="px-6 py-4 whitespace-nowrap font-semibold">{quiz.title}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{tipoTraducciones[quiz.type] || quiz.type}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{quiz.topic}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 rounded text-sm ${
+                        isCompleted
+                          ? 'bg-green-400/20 text-green-400'
+                          : 'bg-yellow-400/20 text-yellow-400'
+                      }`}
+                    >
+                      {quiz.status}
+                    </span>
+                  </td>
+
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {quiz.created_at ? new Date(quiz.created_at).toLocaleDateString('es-ES') : '—'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      onClick={() => !isCompleted && setSelectedQuiz(quiz)}
+                      disabled={isCompleted}
+                      className={`text-sm font-medium underline ${
+                        isCompleted
+                          ? 'text-gray-500 cursor-not-allowed'
+                          : 'text-yellow-400 hover:text-yellow-300 cursor-pointer'
+                      }`}
+                    >
+                      Saber más
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -201,6 +242,8 @@ function AvailableQuizzes({ quizzes }: { quizzes: any[] }) {
     </section>
   );
 }
+
+
 
 
 
