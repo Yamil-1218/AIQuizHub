@@ -16,9 +16,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { topic, numQuestions, questionType } = await req.json();
+    const { topic, numQuestions, questionType, title, description } = await req.json();
 
-    const prompt = generatePrompt(topic, numQuestions, questionType);
+    // Generar título final personalizado o por defecto
+    const finalTitle = title?.trim() || `Cuestionario: ${topic.charAt(0).toUpperCase() + topic.slice(1)}`;
+
+    // Generar descripción final personalizada o por defecto
+    const finalDescription = description?.trim() ||
+      `Este cuestionario evalúa conocimientos sobre ${topic}. ` +
+      `Contiene ${numQuestions} preguntas de tipo ` +
+      `${questionType === 'multiple_choice' ? 'opción múltiple' :
+        questionType === 'true_false' ? 'verdadero/falso' : 'respuesta corta'}.`;
+
+    const prompt = generatePrompt(topic, numQuestions, questionType, finalTitle);
 
     const body = {
       contents: [
@@ -61,34 +71,53 @@ export async function POST(req: Request) {
     let quizData;
     try {
       quizData = JSON.parse(jsonText);
-    } catch (err) {
+
+      // Validación y limpieza del título
+      if (!quizData.title || quizData.title.trim() === '') {
+        quizData.title = finalTitle;
+      } else {
+        quizData.title = quizData.title.replace(/^"|"$/g, '').trim();
+        if (!quizData.title.startsWith('Cuestionario:')) {
+          quizData.title = `Cuestionario: ${quizData.title}`;
+        }
+      }
+
+      // Validación de preguntas
+      if (!quizData.questions || !Array.isArray(quizData.questions)) {
+        throw new Error('El formato de preguntas no es válido');
+      }
+
+    } catch (err: any) {
       console.error('Error al parsear JSON generado:', jsonText, err);
       throw new Error('El contenido generado por Gemini no es JSON válido');
     }
 
-    // Si no hay título, asignar uno por defecto
-    if (!quizData.title || quizData.title.trim() === '') {
-      quizData.title = `Cuestionario de ${topic}`;
-    }
-
-    // Insertar en tabla quizzes como borrador
+    // Insertar quiz como borrador
     const [result]: any = await query(
-      'INSERT INTO quizzes (title, instructor_id, topic, type, status, generated_by_ai) VALUES (?, ?, ?, ?, ?, ?)',
-      [quizData.title, user.id, topic, questionType, 'draft', 1]
+      'INSERT INTO quizzes (title, description, instructor_id, topic, type, status, generated_by_ai) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [
+        quizData.title,
+        quizData.description || finalDescription,
+        user.id,
+        topic,
+        questionType,
+        'draft',
+        1
+      ]
     );
 
     const quizId = result.insertId;
 
-    // Insertar cada pregunta
+    // Insertar preguntas
     for (const q of quizData.questions) {
       await query(
         'INSERT INTO questions (quiz_id, question_text, question_type, options, correct_answer) VALUES (?, ?, ?, ?, ?)',
         [
           quizId,
-          q.question ?? '',
-          q.type ?? 'short_answer',
+          q.question ?? q.question_text ?? '',
+          q.type ?? questionType,
           q.options ? JSON.stringify(q.options) : null,
-          q.correctAnswer ?? null
+          q.correctAnswer ?? q.correct_answer ?? null
         ]
       );
     }
@@ -97,6 +126,7 @@ export async function POST(req: Request) {
       {
         quizId,
         title: quizData.title,
+        topic: topic,
         questions: quizData.questions,
       },
       { status: 201 }
@@ -110,7 +140,7 @@ export async function POST(req: Request) {
   }
 }
 
-function generatePrompt(topic: string, numQuestions: number, questionType: string): string {
+function generatePrompt(topic: string, numQuestions: number, questionType: string, title: string): string {
   let typeInstruction = '';
   if (questionType === 'multiple_choice') {
     typeInstruction = 'con 4 opciones de respuesta donde solo una es correcta';
@@ -121,19 +151,34 @@ function generatePrompt(topic: string, numQuestions: number, questionType: strin
   }
 
   return `Genera un cuestionario sobre "${topic}" con ${numQuestions} preguntas ${typeInstruction}. 
-Asegúrate de incluir un campo "title" con el título del cuestionario.
+El título del cuestionario debe ser exactamente: "${title}" (sin comillas extras).
+La descripción debe ser un resumen conciso del tema del cuestionario.
 
-Devuelve un JSON con el siguiente formato:
+Instrucciones importantes:
+1. El título debe mantenerse exactamente como se indica arriba
+2. Incluye una descripción breve pero informativa
+3. Todas las preguntas deben tener texto y respuesta correcta
+4. Para preguntas de opción múltiple, incluir exactamente 4 opciones
+5. El JSON debe ser válido y no contener caracteres extraños
+
+Ejemplo del formato requerido:
 
 {
-  "title": "Título del cuestionario",
+  "title": "${title}",
+  "description": "Breve descripción sobre el tema del cuestionario",
   "questions": [
     {
-      "question": "Texto de la pregunta",
-      "options": ["op1", "op2", "op3", "op4"], // solo para multiple_choice,
-      "correctAnswer": "respuesta correcta",
+      "question": "Texto claro y conciso de la pregunta",
+      ${questionType === 'multiple_choice' ? `"options": ["Opción 1", "Opción 2", "Opción 3", "Opción 4"],` : ''}
+      "correctAnswer": "Respuesta correcta precisa",
       "type": "${questionType}"
     }
   ]
-}`;
+}
+
+Reglas adicionales:
+- Usa "question" como clave para el texto de la pregunta
+- Usa "correctAnswer" como clave para la respuesta correcta
+- Para preguntas verdadero/falso, usa "Verdadero" o "Falso" como respuesta
+- No incluyas texto explicativo fuera del JSON`;
 }

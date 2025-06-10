@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 
 export default function QuizGeneratorForm() {
   const [topic, setTopic] = useState('');
+  const [title, setTitle] = useState(''); // Nuevo estado para el título
+  const [description, setDescription] = useState(''); // Nuevo estado para la descripción
   const [numQuestions, setNumQuestions] = useState(5);
   const [questionType, setQuestionType] = useState('multiple_choice');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -29,6 +31,8 @@ export default function QuizGeneratorForm() {
         },
         body: JSON.stringify({
           topic,
+          title, // Envía el título
+          description, // Envía la descripción
           numQuestions,
           questionType,
         }),
@@ -86,6 +90,7 @@ export default function QuizGeneratorForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Campo de tema (existente) */}
         <div className="space-y-1">
           <label htmlFor="topic" className="block text-sm font-medium text-gray-700">
             Tema del cuestionario
@@ -101,25 +106,42 @@ export default function QuizGeneratorForm() {
               className="block w-full px-4 py-3 rounded-lg border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200 text-gray-900"
               placeholder="Ej: Fundamentos de Programación"
             />
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-              <svg
-                className="h-5 w-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
-            </div>
           </div>
+        </div>
+
+        {/* Nuevo campo: Título */}
+        <div className="space-y-1">
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+            Título del cuestionario
+          </label>
+          <input
+            id="title"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="block w-full px-4 py-3 rounded-lg border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200 text-gray-900"
+            placeholder="Ej: Evaluación de Fundamentos de TypeScript"
+          />
           <p className="mt-1 text-sm text-gray-500">
-            Describe el tema principal para tu cuestionario
+            El título que verán los estudiantes
+          </p>
+        </div>
+
+        {/* Nuevo campo: Descripción */}
+        <div className="space-y-1">
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+            Descripción
+          </label>
+          <textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            className="block w-full px-4 py-3 rounded-lg border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200 text-gray-900"
+            placeholder="Breve descripción del contenido del cuestionario..."
+          />
+          <p className="mt-1 text-sm text-gray-500">
+            Explica el propósito y alcance del cuestionario
           </p>
         </div>
 
