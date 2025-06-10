@@ -3,12 +3,12 @@ import { query } from '@/lib/db';
 
 export async function GET() {
   try {
-    const quizzes: any[] = await query(`
-      SELECT topic, type, status, created_at
+    const quizzes = await query(`
+      SELECT id,topic, type, status, created_at, title, description
       FROM quizzes
       WHERE status = 'published'
       ORDER BY created_at DESC
-    `);
+    `) as any[];
 
     return NextResponse.json(quizzes, { status: 200 });
   } catch (err) {
