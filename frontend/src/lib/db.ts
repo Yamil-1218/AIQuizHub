@@ -6,6 +6,9 @@ export const db = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 });
+
+//hacer destructuring y devolver solo las filas (rows)
 export async function query(sql: string, values?: any[]) {
-  return db.execute(sql, values); // <- devuelve [rows, fields]
+  const [rows] = await db.execute(sql, values);
+  return rows;
 }
