@@ -12,6 +12,8 @@ export default function StudentDashboard() {
   const { user, initialized } = useSelector((state: RootState) => state.auth);
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [averageScore, setAverageScore] = useState<number | null>(null);
+  const [attemptsCount, setAttemptsCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!initialized) return;
@@ -26,35 +28,34 @@ export default function StudentDashboard() {
     }
   }, [user, initialized, router]);
 
-  useEffect(() => {
-    if (user?.role === 'student') {
-      const fetchData = async () => {
-        try {
-          const quizzesRes = await fetch('/api/auth/quizzes/available');
+useEffect(() => {
+  if (user?.role === 'student') {
+    const fetchData = async () => {
+      try {
+        const quizzesRes = await fetch('/api/auth/quizzes/available');
+        const avgRes = await fetch('/api/auth/students/average-score');
 
-          if (!quizzesRes.ok) {
-            throw new Error('Error al cargar cuestionarios');
-          }
+        if (!quizzesRes.ok) throw new Error('Error al cargar cuestionarios');
+        const quizzesData = await quizzesRes.json();
+        setQuizzes(Array.isArray(quizzesData[0]) ? quizzesData[0] : quizzesData);
 
-          const quizzesData = await quizzesRes.json();
-
-          // ✅ Desanidar si viene como un array de un array
-          if (Array.isArray(quizzesData) && Array.isArray(quizzesData[0])) {
-            setQuizzes(quizzesData[0]);
-          } else {
-            setQuizzes(quizzesData);
-          }
-
-        } catch (error: any) {
-          toast.error(error.message || 'Error al cargar datos');
-        } finally {
-          setLoadingData(false);
+        if (avgRes.ok) {
+          const { average, attemptsCount } = await avgRes.json();
+          setAverageScore(average);
+          setAttemptsCount(attemptsCount);
         }
-      };
 
-      fetchData();
-    }
-  }, [user]);
+      } catch (error: any) {
+        toast.error(error.message || 'Error al cargar datos');
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchData();
+  }
+}, [user]);
+
 
   if (!initialized || loadingData) {
     return (
@@ -78,14 +79,14 @@ export default function StudentDashboard() {
         {/* Estadísticas */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <StatCard
-            icon={<FaBook className="text-yellow-400 text-xl" />}
-            title="Cursos completados"
-            value="3"
+            icon={<FaClipboardList className="text-yellow-400 text-xl" />}
+            title="Cuestionarios completados"
+            value={attemptsCount !== null ? attemptsCount : quizzes.length}
           />
           <StatCard
             icon={<FaChartLine className="text-yellow-400 text-xl" />}
             title="Promedio"
-            value="8.5/10"
+            value={averageScore !== null ? `${averageScore.toFixed(1)}/10` : '—'}
           />
           <StatCard
             icon={<FaClipboardList className="text-yellow-400 text-xl" />}
@@ -95,7 +96,7 @@ export default function StudentDashboard() {
         </section>
 
         {/* Cuestionarios disponibles */}
-        <AvailableQuizzes quizzes={quizzes.slice(0, 3)} />
+        <AvailableQuizzes quizzes={quizzes} />
 
         {/* Actividad reciente */}
         <RecentActivity />
@@ -122,6 +123,9 @@ function StatCard({ icon, title, value }: { icon: React.ReactNode, title: string
 }
 
 function AvailableQuizzes({ quizzes }: { quizzes: any[] }) {
+  const [selectedQuiz, setSelectedQuiz] = useState<any | null>(null);
+  const router = useRouter(); // ✅ Importar router
+
   return (
     <section className="mb-12">
       <h2 className="text-2xl font-bold mb-6">Cuestionarios Disponibles</h2>
@@ -130,15 +134,18 @@ function AvailableQuizzes({ quizzes }: { quizzes: any[] }) {
         <table className="w-full">
           <thead className="border-b border-white/10">
             <tr>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Título</th>
               <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Tipo</th>
               <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Tema</th>
               <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Estado</th>
               <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Creado el</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Acción</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
             {quizzes.map((quiz, index) => (
               <tr key={index} className="hover:bg-white/10 transition-all cursor-default">
+                <td className="px-6 py-4 whitespace-nowrap font-semibold">{quiz.title}</td>
                 <td className="px-6 py-4 whitespace-nowrap">{quiz.type}</td>
                 <td className="px-6 py-4 whitespace-nowrap">{quiz.topic}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -149,14 +156,53 @@ function AvailableQuizzes({ quizzes }: { quizzes: any[] }) {
                 <td className="px-6 py-4 whitespace-nowrap">
                   {quiz.created_at ? new Date(quiz.created_at).toLocaleDateString('es-ES') : '—'}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <button
+                    onClick={() => setSelectedQuiz(quiz)}
+                    className="text-yellow-400 hover:text-yellow-300 text-sm font-medium underline"
+                  >
+                    Saber más
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Modal */}
+      {selectedQuiz && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white/10 backdrop-blur-lg border border-white/20 text-white rounded-lg p-6 w-full max-w-md shadow-xl relative">
+            <button
+              onClick={() => setSelectedQuiz(null)}
+              className="absolute top-2 right-4 text-gray-400 hover:text-white text-2xl font-bold"
+            >
+              ×
+            </button>
+            <h3 className="text-2xl font-bold mb-2">{selectedQuiz.title}</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              {selectedQuiz.topic} / {selectedQuiz.type}
+            </p>
+            <p className="mb-4"><strong>Descripción:</strong> {selectedQuiz.description || 'Sin descripción disponible.'}</p>
+            <div className="text-center">
+              <button
+                onClick={() => {
+                  router.push(`/dashboard/student/quizzes/${selectedQuiz.id}`);
+                }}
+                className="bg-yellow-400 text-gray-900 font-semibold px-6 py-2 rounded-full hover:bg-yellow-300 transition"
+              >
+                Comenzar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
+
+
 
 function RecentActivity() {
   return (
