@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     }
 
     // Insertar quiz como borrador
-    const [result]: any = await query(
+    const result: any = await query(
       'INSERT INTO quizzes (title, description, instructor_id, topic, type, status, generated_by_ai) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [
         quizData.title,
