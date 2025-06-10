@@ -6,3 +6,6 @@ export const db = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 });
+export async function query(sql: string, values?: any[]) {
+  return db.execute(sql, values); // <- devuelve [rows, fields]
+}

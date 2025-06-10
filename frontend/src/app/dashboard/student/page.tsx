@@ -26,19 +26,25 @@ export default function StudentDashboard() {
     }
   }, [user, initialized, router]);
 
-
   useEffect(() => {
     if (user?.role === 'student') {
       const fetchData = async () => {
         try {
-          const quizzesRes = await fetch('/api/quizzes/available');
+          const quizzesRes = await fetch('/api/auth/quizzes/available');
 
           if (!quizzesRes.ok) {
             throw new Error('Error al cargar cuestionarios');
           }
 
           const quizzesData = await quizzesRes.json();
-          setQuizzes(quizzesData);
+
+          // ✅ Desanidar si viene como un array de un array
+          if (Array.isArray(quizzesData) && Array.isArray(quizzesData[0])) {
+            setQuizzes(quizzesData[0]);
+          } else {
+            setQuizzes(quizzesData);
+          }
+
         } catch (error: any) {
           toast.error(error.message || 'Error al cargar datos');
         } finally {
@@ -60,7 +66,6 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 text-white">
-
       <main className="container mx-auto px-4 pt-24 pb-8">
         {/* Sección de bienvenida */}
         <section className="mb-12">
@@ -90,16 +95,16 @@ export default function StudentDashboard() {
         </section>
 
         {/* Cuestionarios disponibles */}
-        <AvailableQuizzes quizzes={quizzes.slice(0, 3)} router={router} />
+        <AvailableQuizzes quizzes={quizzes.slice(0, 3)} />
 
         {/* Actividad reciente */}
         <RecentActivity />
       </main>
     </div>
-  )
+  );
 }
 
-// Componentes auxiliares (pueden estar en un archivo aparte)
+// Componentes auxiliares
 function StatCard({ icon, title, value }: { icon: React.ReactNode, title: string, value: string | number }) {
   return (
     <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-yellow-400 transition-all">
@@ -113,47 +118,44 @@ function StatCard({ icon, title, value }: { icon: React.ReactNode, title: string
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-function AvailableQuizzes({ quizzes, router }: { quizzes: any[], router: any }) {
+function AvailableQuizzes({ quizzes }: { quizzes: any[] }) {
   return (
     <section className="mb-12">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Cuestionarios Disponibles</h2>
-        <button
-          onClick={() => router.push('/quizzes')}
-          className="text-yellow-400 hover:text-yellow-300 flex items-center"
-        >
-          Ver todos <span className="ml-1">→</span>
-        </button>
-      </div>
+      <h2 className="text-2xl font-bold mb-6">Cuestionarios Disponibles</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {quizzes.map((quiz, index) => (
-          <div
-            key={index}
-            onClick={() => router.push(`/quiz/${quiz.id}`)}
-            className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-yellow-400 transition-all cursor-pointer hover:-translate-y-1"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-bold">{quiz.title}</h3>
-              <span className="bg-yellow-400/20 text-yellow-400 text-xs px-2 py-1 rounded">
-                {quiz.difficulty}
-              </span>
-            </div>
-            <p className="text-gray-400 mb-4">{quiz.description}</p>
-            <div className="flex justify-between items-center text-sm">
-              <span>{quiz.questions} preguntas</span>
-              <button className="bg-yellow-400 hover:bg-yellow-300 text-gray-900 px-4 py-2 rounded-lg text-sm font-medium">
-                Comenzar
-              </button>
-            </div>
-          </div>
-        ))}
+      <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden">
+        <table className="w-full">
+          <thead className="border-b border-white/10">
+            <tr>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Tipo</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Tema</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Estado</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Creado el</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/10">
+            {quizzes.map((quiz, index) => (
+              <tr key={index} className="hover:bg-white/10 transition-all cursor-default">
+                <td className="px-6 py-4 whitespace-nowrap">{quiz.type}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{quiz.topic}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="bg-green-400/20 text-green-400 px-2 py-1 rounded text-sm">
+                    {quiz.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {quiz.created_at ? new Date(quiz.created_at).toLocaleDateString('es-ES') : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
-  )
+  );
 }
 
 function RecentActivity() {
@@ -191,5 +193,5 @@ function RecentActivity() {
         </table>
       </div>
     </section>
-  )
+  );
 }
